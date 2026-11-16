@@ -24,7 +24,7 @@ const PORT = Number(process.env.PORT || 9330);
 const HOST = process.env.HOST || (ON_PLATFORM ? "0.0.0.0" : "127.0.0.1");
 const TRUST_PROXY = process.env.TRUST_PROXY ? process.env.TRUST_PROXY === "1" : ON_PLATFORM;
 
-const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json", ".png": "image/png", ".ico": "image/x-icon", ".woff2": "font/woff2" };
+const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json", ".png": "image/png", ".ico": "image/x-icon", ".woff2": "font/woff2", ".txt": "text/plain; charset=utf-8" };
 const json = (v) => JSON.stringify(v, (_k, x) => (typeof x === "bigint" ? x.toString() : x));
 
 // Idempotency for execute calls: same key → same response for 10 minutes.
@@ -149,7 +149,7 @@ async function serveStatic(req, res, url) {
   try {
     const st = await stat(file);
     if (!st.isFile()) throw new Error();
-    res.writeHead(200, { "content-type": TYPES[path.extname(file)] || "application/octet-stream", "cache-control": "no-cache", "x-content-type-options": "nosniff" });
+    res.writeHead(200, { "content-type": TYPES[path.extname(file)] || "application/octet-stream", "cache-control": /^\/(fonts|vendor)\//.test(rel) ? "public, max-age=31536000, immutable" : "no-cache", "x-content-type-options": "nosniff" });
     return res.end(await readFile(file));
   } catch {
     // SPA: unknown paths without an extension get the app shell

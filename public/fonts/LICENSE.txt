@@ -1,0 +1,3 @@
+Fonts in this folder are licensed under the SIL Open Font License 1.1 (https://openfontlicense.org):
+Archivo (Omnibus-Type), Fraunces (Undercase Type), JetBrains Mono (JetBrains), Inter Tight (Rasmus Andersson),
+Instrument Serif (Instrument). Files from the Fontsource packages (latin subset).
