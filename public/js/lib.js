@@ -50,7 +50,7 @@ export function ago(iso) {
   return s < 60 ? `${Math.floor(s)}s` : s < 3600 ? `${Math.floor(s / 60)}m` : s < 86400 ? `${Math.floor(s / 3600)}h` : `${Math.floor(s / 86400)}d`;
 }
 
-export const QUILL_CA = "0x1fd310d062ba82483df3fcd4f1c49a8ee5211c4f";
+export const QUILL_CA = "0xa08021a09d71167a3acbc1b5f595dad9e042dc2b";
 const ETH_LIKE = new Set(["0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "0x0bd7d308f8e1639fab988df18a8011f41eacad73"]);
 
 /** Token or stock logo from /api/logo (cached by the CDN; a generated avatar when no logo exists). Letters show while it loads. */
