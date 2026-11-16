@@ -1,25 +1,26 @@
 // Sign-in with a wallet signature (personal_sign of a one-time nonce message). The session is an HttpOnly cookie.
+// Nonces and sessions are sealed tokens (see seal.mjs), so no server memory is needed between requests.
 // Without a session the API treats the visitor as anonymous: read tools work, tickets and limits do not.
 import { secp256k1 } from "@noble/curves/secp256k1.js";
 import { keccak_256 } from "@noble/hashes/sha3.js";
 import { randomBytes } from "node:crypto";
+import { seal, unseal } from "./seal.mjs";
 
 const NONCE_MS = 5 * 60_000, SESSION_MS = 7 * 24 * 3600_000;
-const nonces = new Map(), sessions = new Map();
 const COOKIE = "quill_session";
 const SECURE = process.env.COOKIE_SECURE === "1";
+const usedNonces = new Map(); // best-effort replay guard within one instance; the signature already binds the address
 
 export function loginMessage(address, nonce, host) {
   return `${host || "Quill"} wants you to sign in with your wallet.\n\nAddress: ${address}\nNonce: ${nonce}\n\nSigning this proves you own the address. It costs nothing and cannot move funds.`;
 }
 
+/** newNonce(address, host) → { nonce (sealed), message } */
 export function newNonce(address, host) {
   if (!/^0x[0-9a-fA-F]{40}$/.test(String(address || ""))) throw Object.assign(new Error("Invalid address"), { status: 400 });
-  const now = Date.now();
-  for (const [k, v] of nonces) if (now - v.t > NONCE_MS) nonces.delete(k);
-  const nonce = randomBytes(12).toString("hex");
-  nonces.set(nonce, { address: address.toLowerCase(), t: now, message: loginMessage(address, nonce, host) });
-  return { nonce, message: nonces.get(nonce).message };
+  const n = randomBytes(12).toString("hex");
+  const message = loginMessage(address, n, host);
+  return { nonce: seal("nonce", { a: address.toLowerCase(), n, m: message }, NONCE_MS), message };
 }
 
 const hexToBytes = (h) => Uint8Array.from(Buffer.from(String(h).replace(/^0x/, ""), "hex"));
@@ -40,15 +41,16 @@ export function recoverAddress(message, signature) {
 
 /** verifyLogin({ nonce, signature }) → { token, address } */
 export function verifyLogin({ nonce, signature }) {
-  const n = nonces.get(nonce);
-  if (!n || Date.now() - n.t > NONCE_MS) throw Object.assign(new Error("Sign-in expired, try again"), { status: 400 });
-  nonces.delete(nonce);
+  let n;
+  try { n = unseal("nonce", nonce); } catch { throw Object.assign(new Error("Sign-in expired, try again"), { status: 400 }); }
+  const now = Date.now();
+  for (const [k, exp] of usedNonces) if (exp < now) usedNonces.delete(k);
+  if (usedNonces.has(n.n)) throw Object.assign(new Error("This sign-in was already used"), { status: 400 });
   let addr;
-  try { addr = recoverAddress(n.message, signature); } catch { throw Object.assign(new Error("Invalid signature"), { status: 401 }); }
-  if (addr !== n.address) throw Object.assign(new Error("Signature does not match the address"), { status: 401 });
-  const token = randomBytes(24).toString("base64url");
-  sessions.set(token, { address: addr, t: Date.now() });
-  return { token, address: addr };
+  try { addr = recoverAddress(n.m, signature); } catch { throw Object.assign(new Error("Invalid signature"), { status: 401 }); }
+  if (addr !== n.a) throw Object.assign(new Error("Signature does not match the address"), { status: 401 });
+  usedNonces.set(n.n, n.exp);
+  return { token: seal("session", { a: addr }, SESSION_MS), address: addr };
 }
 
 export function sessionCookie(token, { secure = false } = {}) {
@@ -56,15 +58,13 @@ export function sessionCookie(token, { secure = false } = {}) {
 }
 export const clearCookie = () => `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
 
+const COOKIE_RE = new RegExp(`(?:^|;\\s*)${COOKIE}=([A-Za-z0-9_.-]+)`);
+
 export function sessionAddress(req) {
-  const m = String(req.headers.cookie || "").match(new RegExp(`(?:^|;\\s*)${COOKIE}=([A-Za-z0-9_-]+)`));
+  const m = String(req.headers.cookie || "").match(COOKIE_RE);
   if (!m) return null;
-  const s = sessions.get(m[1]);
-  if (!s || Date.now() - s.t > SESSION_MS) { sessions.delete(m[1]); return null; }
-  return s.address;
+  try { return unseal("session", m[1]).a; } catch { return null; }
 }
 
-export function logout(req) {
-  const m = String(req.headers.cookie || "").match(new RegExp(`(?:^|;\\s*)${COOKIE}=([A-Za-z0-9_-]+)`));
-  if (m) sessions.delete(m[1]);
-}
+// Sessions are stateless: signing out clears the cookie in this browser.
+export function logout() {}

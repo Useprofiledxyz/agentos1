@@ -291,7 +291,7 @@ function ticketCard(t) {
     const s = t.gate?.swap;
     const expired = t.expiresAt && Date.parse(t.expiresAt) < Date.now();
     el.innerHTML = `
-      <div class="ticket-head"><span>Ticket ${t.ok ? esc(t.id.slice(0, 9)) : "· blocked"}</span><span>${s ? esc(s.chainName) : ""}</span></div>
+      <div class="ticket-head"><span>Ticket ${t.ok ? "#" + esc(t.ref || "") : "· blocked"}</span><span>${s ? esc(s.chainName) : ""}</span></div>
       <div class="ticket-body">
         ${s ? quoteHead(s) : ""}
         ${checkpointHtml(t.gate)}

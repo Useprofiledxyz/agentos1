@@ -62,12 +62,22 @@ npm run mock
 
 ## Deploy
 
-Quill is one Node server (static app + API), so deploy it as a **Node web service**, not as a static site (Vercel static, Netlify, GitHub Pages would serve the page without its API).
+### Vercel
+
+The repo is ready for Vercel: `public/` is served as static files and every `/api/*` request goes to one serverless function (`api/index.js`, see `vercel.json`).
+
+1. Import the repo in Vercel. Leave Framework Preset as **Other**; build settings come from `vercel.json`.
+2. Add the environment variable **`QUILL_SECRET`**: a long random string (for example the output of `openssl rand -hex 32`). Required: sign-in sessions and tickets are signed with it, and every function instance must share it.
+3. Optional: `ANTHROPIC_API_KEY` for the AI chat. Do **not** set `QUILL_MOCK`.
+4. Deploy, then open `/api/health`: it should show `"secret":"env"`.
+
+On Vercel, limits, journal and API token hashes are written to `/tmp`, which is temporary and per instance. Use Vercel for the app and quotes; for a lasting journal and API tokens, run Quill as a Node server (below).
+
+### Railway, Render, Fly or any Node host
 
 - Start command: `npm start` (Railway reads `railway.json`, health check `/api/health`).
-- The platform's `PORT` is used and the server listens on `0.0.0.0`; proxy headers are trusted automatically on Railway, Render, Fly and Heroku.
-- Variables: `ANTHROPIC_API_KEY` for the AI chat (optional). Do **not** set `QUILL_MOCK` in production.
-- Storage: limits, journal and API token hashes live in `data/`. Mount a volume and set `QUILL_DATA` to it, or they reset on every redeploy.
+- The platform's `PORT` is used and the server listens on `0.0.0.0`; proxy headers are trusted automatically.
+- Set `QUILL_SECRET` (or let the server generate one in `data/`). Mount a volume and set `QUILL_DATA` to it so limits, journal and tokens survive redeploys.
 
 ## API
 

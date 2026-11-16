@@ -1,11 +1,11 @@
 // Chains Quill can quote and build swaps on, and the tokens it knows by symbol.
 // Any other token is accepted by contract address; its symbol and decimals are read from the chain.
 // Robinhood Chain (4663) is the home chain; Base, Arbitrum and Ethereum are extra networks with the same flow.
-import { readFileSync } from "node:fs";
+import stockList from "./data/robinhood-stocks.json" with { type: "json" };
 
 export const NATIVE = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
 
-const STOCKS = JSON.parse(readFileSync(new URL("./data/robinhood-stocks.json", import.meta.url), "utf8")).stocks;
+const STOCKS = stockList.stocks;
 
 export const DEFAULT_CHAIN = "robinhood";
 

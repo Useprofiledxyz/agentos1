@@ -7,6 +7,7 @@ import { chat, llmOn } from "./src/agent.mjs";
 import { findToken } from "./src/apitokens.mjs";
 import { clearCookie, logout, newNonce, sessionAddress, sessionCookie, verifyLogin } from "./src/auth.mjs";
 import { publicChains } from "./src/chains.mjs";
+import { secretSource } from "./src/seal.mjs";
 import { buildTicket, getIntent, markSent, prepareSwap } from "./src/intents.mjs";
 import { readJournal } from "./src/journal.mjs";
 import { MOCK } from "./src/mock.mjs";
@@ -17,7 +18,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(here, "public");
 // Hosting platforms (Railway, Render, Fly, Heroku…) set PORT and route traffic through their proxy, so the server must
 // listen on all interfaces there. Locally it stays on 127.0.0.1 unless HOST says otherwise.
-const ON_PLATFORM = !!(process.env.PORT || process.env.RAILWAY_ENVIRONMENT || process.env.RENDER || process.env.FLY_APP_NAME || process.env.DYNO);
+const ON_PLATFORM = !!(process.env.PORT || process.env.VERCEL || process.env.RAILWAY_ENVIRONMENT || process.env.RENDER || process.env.FLY_APP_NAME || process.env.DYNO);
 const PORT = Number(process.env.PORT || 9330);
 const HOST = process.env.HOST || (ON_PLATFORM ? "0.0.0.0" : "127.0.0.1");
 const TRUST_PROXY = process.env.TRUST_PROXY ? process.env.TRUST_PROXY === "1" : ON_PLATFORM;
@@ -59,9 +60,9 @@ async function api(req, res, url) {
     return send(res, 200, { address: v.address }, { "set-cookie": sessionCookie(v.token, { secure: https }) });
   }
   if (p === "/auth/me") return send(res, 200, { address: wallet });
-  if (p === "/auth/logout" && req.method === "POST") { logout(req); return send(res, 200, { ok: true }, { "set-cookie": clearCookie() }); }
+  if (p === "/auth/logout" && req.method === "POST") { logout(); return send(res, 200, { ok: true }, { "set-cookie": clearCookie() }); }
 
-  if (p === "/health") return send(res, 200, { ok: true, llm: llmOn(), mock: MOCK, chains: publicChains().map((c) => c.key) });
+  if (p === "/health") return send(res, 200, { ok: true, llm: llmOn(), mock: MOCK, secret: secretSource, chains: publicChains().map((c) => c.key) });
   if (p === "/chains") return send(res, 200, publicChains());
   if (p === "/tools" && req.method === "GET") return send(res, 200, publicToolList());
 
@@ -100,7 +101,7 @@ async function api(req, res, url) {
     return send(res, 200, await prepareSwap({ chain: b.chain, tokenIn: b.tokenIn, tokenOut: b.tokenOut, amount: b.amount, slippagePct: b.slippagePct, sender: wallet }, { kind: "ticket", owner: wallet }));
   }
 
-  const t = p.match(/^\/tickets\/([A-Za-z0-9_-]+)(\/build|\/sent)?$/);
+  const t = p.match(/^\/tickets\/([A-Za-z0-9_.-]+)(\/build|\/sent)?$/);
   if (t) {
     if (!t[2] && req.method === "GET") { const x = getIntent(t[1]); return x ? send(res, 200, x) : send(res, 404, { error: "Unknown or expired ticket" }); }
     if (!t[1].startsWith("tk_")) return send(res, 400, { error: "Only chat tickets can be signed here; API ids go through execute_intent" });
@@ -138,8 +139,11 @@ async function serveStatic(req, res, url) {
   }
 }
 
-export const server = createServer(async (req, res) => {
+/** The request handler: used by the long-running server below and by serverless entries (api/index.js on Vercel). */
+export async function handler(req, res) {
   const url = new URL(req.url, "http://local");
+  // Vercel rewrites /api/* to the function and passes the original path as __path.
+  if (url.searchParams.has("__path")) { url.pathname = "/api/" + url.searchParams.get("__path"); url.searchParams.delete("__path"); }
   try {
     if (url.pathname.startsWith("/api/") || url.pathname === "/api") return await api(req, res, url);
     if (req.method !== "GET" && req.method !== "HEAD") { res.writeHead(405); return res.end(); }
@@ -149,7 +153,9 @@ export const server = createServer(async (req, res) => {
     if (status >= 500) console.error(e);
     send(res, status, { error: String(e.message || e).slice(0, 300) });
   }
-});
+}
+
+export const server = createServer(handler);
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   process.on("SIGTERM", () => server.close(() => process.exit(0)));

@@ -2,7 +2,9 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const DIR = process.env.QUILL_DATA || path.resolve("data");
+// Serverless hosts only allow writes under /tmp (and it is per instance and temporary there).
+export const DATA_DIR = process.env.QUILL_DATA || (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME ? "/tmp/quill-data" : path.resolve("data"));
+const DIR = DATA_DIR;
 const locks = new Map();
 
 export async function readJson(name, fallback) {
