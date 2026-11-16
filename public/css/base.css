@@ -172,3 +172,7 @@ pre.code { background: var(--bg-2); color: var(--text-2); border: 1px solid var(
 /* live chip when the chain does not answer */
 .offline .live-dot { background: var(--down); }
 .offline .live-dot::after { border-color: var(--down); }
+
+/* company logos: whole, centered, on a backdrop chosen per logo */
+.avatar img.fit { object-fit: contain; padding: 16%; }
+.avatar.is-stock { background: var(--panel-2); color: transparent; }

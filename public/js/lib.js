@@ -53,14 +53,42 @@ export function ago(iso) {
 const ETH_LIKE = new Set(["0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "0x0bd7d308f8e1639fab988df18a8011f41eacad73"]);
 
 /** Token or stock logo from /api/logo (cached by the CDN; a generated avatar when no logo exists). Letters show while it loads. */
-export function avatar(sym, address, image) {
+export function avatar(sym, address, image, opts = {}) {
   const letters = esc(String(sym || "?").replace(/[^\p{L}\p{N}]/gu, "").slice(0, 2).toUpperCase() || "?");
   const ok = /^0x[0-9a-fA-F]{40}$/.test(String(address || ""));
   const a = ok ? address.toLowerCase() : "";
   // ETH and WETH ship with the site, so they never wait on a lookup
   const src = ETH_LIKE.has(a) || (!ok && /^w?eth$/i.test(String(sym || ""))) ? "/img/eth.svg" : ok ? `/api/logo/${esc(a)}?s=${encodeURIComponent(String(sym || "").slice(0, 12))}${image && /^https:\/\//.test(image) ? `&u=${encodeURIComponent(image)}` : ""}` : "";
-  return `<span class="avatar">${letters}${src ? `<img src="${src}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ""}</span>`;
+  // Company logos are not round artwork: fit them whole on a matching backdrop instead of cropping them.
+  const stock = opts.stock ?? stockSet().has(a);
+  return `<span class="avatar${stock ? " is-stock" : ""}">${letters}${src ? `<img src="${src}" alt="" loading="lazy" decoding="async"${stock ? ' onload="qFitLogo(this)"' : ""} onerror="this.remove()">` : ""}</span>`;
 }
+
+let stocks;
+function stockSet() {
+  if (!stocks && state.chains.length) stocks = new Set(state.chains.flatMap((c) => (c.stocks || []).map((s) => s.address.toLowerCase())));
+  return stocks || new Set();
+}
+
+/** Pick a backdrop for a logo: its own background if it has one, else light or dark depending on the ink. */
+window.qFitLogo = (img) => {
+  try {
+    const c = document.createElement("canvas"); c.width = c.height = 24;
+    const g = c.getContext("2d", { willReadFrequently: true });
+    g.drawImage(img, 0, 0, 24, 24);
+    const d = g.getImageData(0, 0, 24, 24).data;
+    let clear = 0, lum = 0, n = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 24) { clear++; continue; }
+      lum += (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255; n++;
+    }
+    let bg;
+    if (clear / (d.length / 4) > 0.06) bg = n && lum / n > 0.72 ? "#161b1a" : "#ffffff";
+    else { const k = (24 * 0 + 0) * 4; bg = `rgb(${d[k]},${d[k + 1]},${d[k + 2]})`; } // opaque: extend its own corner colour
+    img.style.background = bg;
+    img.classList.add("fit");
+  } catch { img.classList.add("fit"); img.style.background = "#ffffff"; }
+};
 
 let toastTimer;
 export function toast(msg, ms = 3500) {

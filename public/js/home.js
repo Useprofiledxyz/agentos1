@@ -89,7 +89,7 @@ async function stocks() {
     $("#nStocks").textContent = r.stocks.length;
     const pick = r.stocks.filter((s) => s.priceUsd != null).sort((a, b) => (b.volume24hUsd || 0) - (a.volume24hUsd || 0)).slice(0, 12);
     if (!pick.length) throw new Error();
-    $("#paneStocks").innerHTML = pick.map((s) => `<a href="/app/#/swap?in=ETH&out=${esc(s.symbol)}">${avatar(s.symbol, s.address)}<b>${esc(s.symbol)}</b><span class="p">${fmtPrice(s.priceUsd)}</span> ${signed(s.change24hPct)}</a>`).join("");
+    $("#paneStocks").innerHTML = pick.map((s) => `<a href="/app/#/swap?in=ETH&out=${esc(s.symbol)}">${avatar(s.symbol, s.address, null, { stock: true })}<b>${esc(s.symbol)}</b><span class="p">${fmtPrice(s.priceUsd)}</span> ${signed(s.change24hPct)}</a>`).join("");
   } catch { setTimeout(stocks, 15000); }
 }
 

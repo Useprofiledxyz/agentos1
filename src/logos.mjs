@@ -18,7 +18,10 @@ const lc = (a) => String(a || "").toLowerCase();
 // Stock logos never wait on an API: the company logo by ticker, with the token's own GeckoTerminal image (a generic
 // Robinhood mark for most stocks) as the fallback.
 const stockLogo = (sym) => `https://financialmodelingprep.com/image-stock/${encodeURIComponent(sym)}.png`;
-for (const [sym, t] of Object.entries(RH.tokens)) if (t.stock) urls.set(lc(t.address), { url: stockLogo(sym), alt: t.logo || null, t: Infinity });
+for (const [sym, t] of Object.entries(RH.tokens)) {
+  if (t.stock) urls.set(lc(t.address), { url: stockLogo(sym), alt: t.logo || null, t: Infinity });
+  else if (t.logo) urls.set(lc(t.address), { url: t.logo, t: Infinity }); // base tokens with a known logo (USDG)
+}
 const GECKO_WAIT_MS = 1000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

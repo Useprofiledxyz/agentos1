@@ -19,7 +19,7 @@ export const CHAINS = {
     tokens: {
       ETH: { address: NATIVE, decimals: 18 },
       WETH: { address: "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73", decimals: 18 },
-      USDG: { address: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168", decimals: 6 },
+      USDG: { address: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168", decimals: 6, logo: "https://coin-images.coingecko.com/coins/images/51281/large/GDN_USDG_Token_200x200.png?1730484111" },
       ...Object.fromEntries(STOCKS.map((s) => [s.symbol, { address: s.address, decimals: s.decimals, name: s.name, stock: true, logo: s.logo || null }])),
     },
   },

@@ -270,46 +270,125 @@ async function tokenView(q) {
 }
 
 function swap(q) {
-  const chain = state.chains.find((c) => c.key === state.chain);
-  const known = [...(chain?.tokens || []), ...(chain?.stocks || []).map((s) => s.symbol)];
-  const defOut = state.chain === "robinhood" ? "USDG" : "USDC";
-  view.innerHTML = head(`Swap`, `On ${esc(chainName())}. Routes from KyberSwap; the ticket is re-checked on the live pool right before you sign.`)
+  const chain = state.chains.find((c) => c.key === "robinhood");
+  view.innerHTML = head(`Swap`, `On Robinhood Chain. Routes from KyberSwap; the ticket is re-checked on the live pool right before you sign.`)
     + `<div class="grid">
       <form class="card span-5 swap-card" id="swapForm" autocomplete="off">
-        <div class="leg"><label for="sAmt">You pay</label><div class="leg-row"><input class="amt" id="sAmt" inputmode="decimal" value="${esc(q.get("amount") || "0.01")}" pattern="[0-9]*[.]?[0-9]+" required aria-label="Amount"><span class="tok-logo" id="sInLogo"></span><input class="tok" id="sIn" list="known" value="${esc(q.get("in") || "ETH")}" required aria-label="Token you pay"></div></div>
+        <div class="leg"><label for="sAmt">You pay</label><div class="leg-row"><input class="amt" id="sAmt" inputmode="decimal" value="${esc(q.get("amount") || "0.01")}" pattern="[0-9]*[.]?[0-9]+" required aria-label="Amount">
+          <div class="tok-pick" id="pickIn"><button type="button" class="tok-btn" aria-haspopup="listbox" aria-expanded="false"><span class="tok-logo"></span><span class="tok-sym"></span><i class="caret-d"></i></button></div></div></div>
         <button type="button" class="flip" id="flip" aria-label="Flip tokens">⇅</button>
-        <div class="leg"><label for="sOut">You receive</label><div class="leg-row"><span class="out-amt" id="outAmt">—</span><span class="tok-logo" id="sOutLogo"></span><input class="tok" id="sOut" list="known" value="${esc(q.get("out") || defOut)}" placeholder="symbol or 0x…" required aria-label="Token you receive"></div></div>
-        <datalist id="known">${known.map((t) => `<option value="${esc(t)}">`).join("")}</datalist>
-        ${chain?.stocks?.length ? `<div class="field" style="margin-top:14px"><label>Stocks</label><div class="chips">${chain.stocks.slice(0, 10).map((s) => `<button type="button" class="chip chip-logo" data-stock="${esc(s.symbol)}" title="${esc(s.name)}">${avatar(s.symbol, s.address)}${esc(s.symbol)}</button>`).join("")}</div></div>` : ""}
+        <div class="leg"><label>You receive</label><div class="leg-row"><span class="out-amt" id="outAmt">—</span>
+          <div class="tok-pick" id="pickOut"><button type="button" class="tok-btn" aria-haspopup="listbox" aria-expanded="false"><span class="tok-logo"></span><span class="tok-sym"></span><i class="caret-d"></i></button></div></div></div>
+        ${chain?.stocks?.length ? `<div class="field" style="margin-top:14px"><label>Stocks</label><div class="chips">${chain.stocks.slice(0, 10).map((s) => `<button type="button" class="chip chip-logo" data-stock="${esc(s.symbol)}" title="${esc(s.name)}">${avatar(s.symbol, s.address, null, { stock: true })}${esc(s.symbol)}</button>`).join("")}</div></div>` : ""}
         <div class="row between" style="margin:14px 0 6px"><span class="field"><label>Slippage</label></span><div class="seg" id="slip">${[0.5, 1, 3, 5].map((s) => `<button type="button" data-s="${s}" class="${s === 1 ? "on" : ""}">${s}%</button>`).join("")}</div></div>
         <button class="btn primary block" type="submit" style="padding:14px">${state.address ? "Run Checkpoint & make ticket" : "Run Checkpoint"}</button>
       </form>
       <div class="span-7 stack" id="swapOut"><div class="card empty" style="border-style:dashed">Pick a pair and run the Checkpoint. Nothing is sent until you sign.</div></div>
     </div>`;
+
+  // ---- the token list: base tokens, every tokenized stock, and today's trending coins ----
+  const base = [
+    { symbol: "ETH", name: "Ether", address: chain.tokenAddresses.ETH, group: "Tokens" },
+    { symbol: "WETH", name: "Wrapped Ether", address: chain.tokenAddresses.WETH, group: "Tokens" },
+    { symbol: "USDG", name: "Global Dollar", address: chain.tokenAddresses.USDG, group: "Tokens" },
+  ];
+  const stocks = chain.stocks.map((s) => ({ symbol: s.symbol, name: s.name, address: s.address, group: "Stocks", stock: true }));
+  let coins = [], prices = {};
+  const all = () => [...base, ...stocks, ...coins];
+  const loadExtras = (() => {
+    let started = false;
+    return () => {
+      if (started) return; started = true;
+      api("/tools/onchain_pools?kind=trending&limit=25").then((r) => {
+        const seen = new Set(all().map((t) => t.address.toLowerCase()));
+        coins = r.pools.filter((p) => p.token.address && !seen.has(p.token.address.toLowerCase()) && !seen.add(p.token.address.toLowerCase()))
+          .map((p) => ({ symbol: p.token.symbol, name: p.token.name || p.dex, address: p.token.address, image: p.token.image, group: "Trending coins", priceUsd: p.priceUsd, change: p.change.h24 }));
+        picker?.refresh();
+      }).catch(() => {});
+      api("/tools/stock_prices").then((r) => { r.stocks.forEach((s) => (prices[s.address.toLowerCase()] = s)); picker?.refresh(); }).catch(() => {});
+    };
+  })();
+
+  // ---- the two token slots ----
+  const pick = { in: null, out: null };
+  const findBy = (v) => {
+    v = String(v || "").trim();
+    if (!v) return null;
+    const hit = all().find((t) => t.symbol.toUpperCase() === v.toUpperCase() || t.address.toLowerCase() === v.toLowerCase());
+    if (hit) return hit;
+    return /^0x[0-9a-fA-F]{40}$/.test(v) ? { symbol: short(v), name: "Token by address", address: v, group: "Address" } : null;
+  };
+  const paint = (side) => {
+    const el = $(side === "in" ? "#pickIn" : "#pickOut"), t = pick[side];
+    el.querySelector(".tok-logo").innerHTML = t ? avatar(t.symbol, t.address, t.image, { stock: t.stock }) : "";
+    el.querySelector(".tok-sym").textContent = t ? t.symbol : "Select";
+  };
+  const choose = (side, t) => { pick[side] = t; paint(side); $("#outAmt").textContent = "—"; };
+  choose("in", findBy(q.get("in") || "ETH"));
+  choose("out", findBy(q.get("out") || "USDG"));
+
+  // ---- dropdown ----
+  let picker = null;
+  function openPicker(side) {
+    closePicker();
+    loadExtras();
+    const host = $(side === "in" ? "#pickIn" : "#pickOut");
+    host.querySelector(".tok-btn").setAttribute("aria-expanded", "true");
+    const pop = document.createElement("div");
+    pop.className = "tok-pop";
+    pop.innerHTML = `<input class="tok-search" placeholder="Search name, symbol or paste 0x…" aria-label="Search tokens"><div class="tok-list" role="listbox"></div>`;
+    host.append(pop);
+    const input = pop.querySelector(".tok-search"), list = pop.querySelector(".tok-list");
+    let items = [], active = 0;
+    const render = () => {
+      const f = input.value.trim().toLowerCase();
+      items = all().filter((t) => !f || t.symbol.toLowerCase().includes(f) || (t.name || "").toLowerCase().includes(f) || t.address.toLowerCase() === f);
+      if (/^0x[0-9a-f]{40}$/.test(f) && !items.length) items = [{ symbol: short(input.value.trim()), name: "Use this contract address", address: input.value.trim(), group: "Address" }];
+      active = Math.min(active, Math.max(0, items.length - 1));
+      let group = "";
+      list.innerHTML = items.length ? items.map((t, i) => {
+        const pr = t.stock ? prices[t.address.toLowerCase()] : t;
+        const g = t.group !== group ? `<div class="tok-group">${esc((group = t.group))}${t.group === "Trending coins" && !coins.length ? "" : ""}</div>` : "";
+        return `${g}<button type="button" class="tok-item${i === active ? " on" : ""}" data-i="${i}" role="option">${avatar(t.symbol, t.address, t.image, { stock: t.stock })}
+          <span class="tok-name"><b>${esc(t.symbol)}</b><small>${esc(t.name || "")}</small></span>
+          <span class="tok-price">${pr?.priceUsd != null ? fmtPrice(pr.priceUsd) : ""}${(pr?.change24hPct ?? pr?.change) != null ? `<br>${signed(pr.change24hPct ?? pr.change)}` : ""}</span></button>`;
+      }).join("") + (coins.length ? "" : `<div class="tok-group muted">Trending coins load in a moment…</div>`) : `<div class="tok-empty">No match. Paste a token contract address (0x…) to use any coin on Robinhood Chain.</div>`;
+      list.querySelectorAll(".tok-item").forEach((b) => (b.onclick = () => { choose(side, items[Number(b.dataset.i)]); closePicker(); }));
+    };
+    input.oninput = () => { active = 0; render(); };
+    input.onkeydown = (e) => {
+      if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(items.length - 1, active + 1); render(); list.querySelector(".tok-item.on")?.scrollIntoView({ block: "nearest" }); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(0, active - 1); render(); list.querySelector(".tok-item.on")?.scrollIntoView({ block: "nearest" }); }
+      else if (e.key === "Enter") { e.preventDefault(); if (items[active]) { choose(side, items[active]); closePicker(); } }
+      else if (e.key === "Escape") closePicker();
+    };
+    picker = { refresh: render, host, side };
+    render();
+    input.focus();
+  }
+  function closePicker() {
+    if (!picker) return;
+    picker.host.querySelector(".tok-pop")?.remove();
+    picker.host.querySelector(".tok-btn").setAttribute("aria-expanded", "false");
+    picker = null;
+  }
+  for (const side of ["in", "out"]) $(side === "in" ? "#pickIn .tok-btn" : "#pickOut .tok-btn").onclick = (e) => { e.stopPropagation(); picker?.side === side ? closePicker() : openPicker(side); };
+  const outside = (e) => { if (picker && !picker.host.contains(e.target)) closePicker(); };
+  document.addEventListener("pointerdown", outside);
+  const cleanup = () => { document.removeEventListener("pointerdown", outside); window.removeEventListener("hashchange", cleanup); };
+  window.addEventListener("hashchange", cleanup);
+
   let slip = 1;
   $("#slip").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; slip = Number(b.dataset.s); $("#slip").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); };
-  // token logos next to the inputs, following whatever is typed (symbol or 0x address)
-  const addrOf = (v) => {
-    v = String(v || "").trim();
-    if (/^0x[0-9a-fA-F]{40}$/.test(v)) return v;
-    const u = v.toUpperCase();
-    return chain?.tokenAddresses?.[u] || chain?.stocks?.find((s) => s.symbol === u)?.address || null;
-  };
-  const paintLogos = () => {
-    for (const [inp, slot] of [["#sIn", "#sInLogo"], ["#sOut", "#sOutLogo"]]) {
-      const v = $(inp).value.trim(), a = addrOf(v);
-      $(slot).innerHTML = v ? avatar(v.startsWith("0x") ? "?" : v, a) : "";
-    }
-  };
-  ["#sIn", "#sOut"].forEach((id) => $(id).addEventListener("input", paintLogos));
-  paintLogos();
-  $("#flip").onclick = () => { const a = $("#sIn").value; $("#sIn").value = $("#sOut").value; $("#sOut").value = a; $("#outAmt").textContent = "—"; paintLogos(); };
-  view.querySelectorAll("[data-stock]").forEach((b) => (b.onclick = () => { $("#sIn").value = "ETH"; $("#sOut").value = b.dataset.stock; $("#outAmt").textContent = "—"; paintLogos(); }));
+  $("#flip").onclick = () => { const a = pick.in; choose("in", pick.out); choose("out", a); };
+  view.querySelectorAll("[data-stock]").forEach((b) => (b.onclick = () => { choose("in", findBy("ETH")); choose("out", findBy(b.dataset.stock)); }));
   $("#swapForm").onsubmit = async (e) => {
     e.preventDefault();
+    if (!pick.in || !pick.out) { toast("Pick both tokens first"); return; }
     const out = $("#swapOut");
     out.innerHTML = `<div class="card"><span class="spinner"></span>&nbsp; Running the Checkpoint on the live pool…</div>`;
-    const args = { chain: "robinhood", tokenIn: $("#sIn").value.trim(), tokenOut: $("#sOut").value.trim(), amount: $("#sAmt").value.trim(), slippagePct: slip };
+    const ref = (t) => (t.group === "Tokens" || t.stock ? t.symbol : t.address);
+    const args = { chain: "robinhood", tokenIn: ref(pick.in), tokenOut: ref(pick.out), amount: $("#sAmt").value.trim(), slippagePct: slip };
     try {
       if (!state.address) {
         const g = await api(`/tools/quote_swap?${new URLSearchParams(args)}`);
