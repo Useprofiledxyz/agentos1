@@ -1,0 +1,22 @@
+{
+  "name": "agentos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AgentOS: an AI trading desk. Ask in plain words, review the Gate checks, sign in your own wallet.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "serve": "node server.mjs",
+    "dev": "node --watch-path=src --watch-path=server.mjs server.mjs",
+    "mock": "AGENTOS_MOCK=1 node server.mjs",
+    "test": "AGENTOS_MOCK=1 node --test test/",
+    "token": "node scripts/token.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0"
+  }
+}
