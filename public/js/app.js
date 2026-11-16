@@ -68,9 +68,9 @@ async function onWallet() {
 
 // ---------------- routing ----------------
 
-// Only the Desk is open without a wallet; every other menu (and the agent) asks you to connect first.
-const OPEN_ROUTES = new Set(["desk"]);
-const ROUTE_NAMES = { swap: "Swap", check: "Checkpoint", live: "Onchain live", new: "New pairs", stocks: "Stocks", token: "Token", portfolio: "Portfolio", limits: "Limits", journal: "Journal", api: "API & MCP", ask: "The agent" };
+// The whole app needs a connected wallet; the homepage at / stays public.
+const OPEN_ROUTES = new Set();
+const ROUTE_NAMES = { desk: "The desk", swap: "Swap", check: "Checkpoint", live: "Onchain live", new: "New pairs", stocks: "Stocks", token: "Token", portfolio: "Portfolio", limits: "Limits", journal: "Journal", api: "API & MCP", ask: "The agent" };
 
 function gate(r) {
   const hasWallet = !!window.ethereum;
