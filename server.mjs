@@ -72,7 +72,7 @@ async function api(req, res, url) {
   // GET /api/logo/:address?s=SYMBOL — token or stock logo (proxied image, or a generated avatar).
   const lg = p.match(/^\/logo\/(0x[0-9a-fA-F]{40})(?:\.png)?$/);
   if (lg && (req.method === "GET" || req.method === "HEAD")) {
-    const r = await logoResponse(lg[1], String(q.s || "").slice(0, 12));
+    const r = await logoResponse(lg[1], String(q.s || "").slice(0, 12), q.u ? String(q.u).slice(0, 400) : null);
     res.writeHead(r.status, r.headers);
     return res.end(req.method === "HEAD" ? undefined : r.body);
   }

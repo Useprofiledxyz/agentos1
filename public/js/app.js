@@ -125,7 +125,7 @@ function poolRows(pools, { showAge = false } = {}) {
     <th class="num">Volume</th><th class="num hide-sm">Liquidity</th><th class="num hide-sm">${showAge ? "Age" : "FDV"}</th><th class="num hide-sm">Txns</th></tr></thead><tbody>
     ${pools.map((p) => `
     <tr class="clickable" data-token="${esc(p.token.address || "")}">
-      <td><div class="token-cell">${avatar(p.token.symbol, p.token.address)}<div><b>${esc(p.token.symbol)}${p.token.stock ? ' <span class="tag neutral">stock</span>' : ""}</b><small>${esc(p.dex)}${p.token.name && p.token.name !== p.token.symbol ? ` · ${esc(p.token.name)}` : ""}</small></div></div></td>
+      <td><div class="token-cell">${avatar(p.token.symbol, p.token.address, p.token.image)}<div><b>${esc(p.token.symbol)}${p.token.stock ? ' <span class="tag neutral">stock</span>' : ""}</b><small>${esc(p.dex)}${p.token.name && p.token.name !== p.token.symbol ? ` · ${esc(p.token.name)}` : ""}</small></div></div></td>
       <td class="num">${fmtPrice(p.priceUsd)}</td>
       <td class="num hide-sm">${signed(p.change.m5)}</td><td class="num">${signed(p.change.h1)}</td><td class="num">${signed(p.change.h24)}</td>
       <td class="num">${usd(p.volume24hUsd)}</td><td class="num hide-sm">${usd(p.liquidityUsd)}</td>
@@ -257,7 +257,7 @@ async function tokenView(q) {
   try {
     const t = await api(`/tools/onchain_token?address=${encodeURIComponent(address)}`);
     const m = t.main;
-    $("#tokHead").innerHTML = `<div class="page-head" style="margin:0"><div class="token-hero">${avatar(t.token?.symbol, address)}<div><h1>${esc(t.token?.symbol || short(address))}</h1><span class="muted">${esc(t.token?.name || "")} · <span class="mono">${esc(short(address))}</span></span></div></div>
+    $("#tokHead").innerHTML = `<div class="page-head" style="margin:0"><div class="token-hero">${avatar(t.token?.symbol, address, t.token?.image)}<div><h1>${esc(t.token?.symbol || short(address))}</h1><span class="muted">${esc(t.token?.name || "")} · <span class="mono">${esc(short(address))}</span></span></div></div>
       <div class="row">${m ? `<div style="text-align:right"><div class="price-big">${fmtPrice(m.priceUsd)}</div><div>${signed(m.change.h24)} <span class="muted">24h</span></div></div>` : ""}
       <a class="btn primary" href="#/swap?in=ETH&out=${esc(address)}">Swap</a><a class="btn ghost" href="${esc(t.explorer)}" target="_blank" rel="noopener">Explorer ↗</a></div></div>
       ${t.totals ? `<div class="stats" style="margin-top:20px">${[["Volume 24h", usd(t.totals.volume24hUsd), `across ${t.totals.pools} pool${t.totals.pools > 1 ? "s" : ""}`], ["Liquidity", usd(t.totals.liquidityUsd), "all pools"], ["FDV", usd(m.fdvUsd), m.marketCapUsd ? `mcap ${usd(m.marketCapUsd)}` : ""], ["Txns 24h", `<span class="up">${t.totals.buys24h.toLocaleString("en-US")}</span><span class="faint"> / </span><span class="down">${t.totals.sells24h.toLocaleString("en-US")}</span>`, "buys / sells"]].map(([k, v, s]) => `<div class="card stat"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join("")}</div>` : ""}`;

@@ -19,7 +19,7 @@ const lc = (a) => String(a || "").toLowerCase();
 // Robinhood mark for most stocks) as the fallback.
 const stockLogo = (sym) => `https://financialmodelingprep.com/image-stock/${encodeURIComponent(sym)}.png`;
 for (const [sym, t] of Object.entries(RH.tokens)) if (t.stock) urls.set(lc(t.address), { url: stockLogo(sym), alt: t.logo || null, t: Infinity });
-const GECKO_WAIT_MS = 2500;
+const GECKO_WAIT_MS = 1000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** remember(address, url) — lets other modules (pool lists) feed logos they already have, at no extra cost. */
@@ -79,7 +79,7 @@ async function lookup(addrs) {
   let geckoDone = false;
   const geckoP = geckoGet(`networks/robinhood/tokens/multi/${addrs.join(",")}`, FOUND_MS)
     .then((v) => { geckoDone = true; fromGecko(v); return v; })
-    .catch(() => { geckoDone = true; });
+    .catch(() => {}); // a failed lookup is not "no logo": leave it incomplete so the next request tries again
   const dex = await fetch(`https://api.dexscreener.com/tokens/v1/robinhood/${addrs.join(",")}`, { signal: AbortSignal.timeout(4000), headers: { accept: "application/json" } })
     .then((r) => (r.ok ? r.json() : [])).catch(() => []);
   const dexFound = new Map();
@@ -133,12 +133,15 @@ export function fallbackSvg(address, symbol) {
 }
 
 /** logoResponse(address, symbol) → { status, headers, body } for /api/logo/:address */
-export async function logoResponse(address, symbol) {
+export async function logoResponse(address, symbol, hint) {
   const base = { "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'", "cross-origin-resource-policy": "same-origin" };
   if (!/^0x[0-9a-fA-F]{40}$/.test(String(address || ""))) return { status: 400, headers: { ...base, "content-type": "text/plain" }, body: "bad address" };
   try {
-    const url = await logoUrl(address);
-    for (const u of [url, urls.get(lc(address))?.alt].filter(Boolean)) {
+    // A pool list already knows the image: try that first, so no lookup (and no other instance's memory) is needed.
+    const known = hint && isAllowedImage(hint) ? hint : null;
+    if (known) remember(address, known);
+    const url = known || (await logoUrl(address));
+    for (const u of [...new Set([url, urls.get(lc(address))?.url, urls.get(lc(address))?.alt])].filter(Boolean)) {
       try {
         const img = await fetchImage(u);
         return { status: 200, headers: { ...base, "content-type": img.type, "cache-control": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000" }, body: img.body };
@@ -147,6 +150,6 @@ export async function logoResponse(address, symbol) {
   } catch {}
   // No logo yet: a short cache, so a logo added upstream later shows up within the hour (or within a minute when
   // the lookup was cut short).
-  const cache = lookupIncomplete(address) ? "public, max-age=30, s-maxage=60" : "public, max-age=1800, s-maxage=3600";
+  const cache = lookupIncomplete(address) ? "public, max-age=30, s-maxage=60" : "public, max-age=300, s-maxage=600";
   return { status: 200, headers: { ...base, "content-type": "image/svg+xml", "cache-control": cache }, body: fallbackSvg(address, symbol) };
 }

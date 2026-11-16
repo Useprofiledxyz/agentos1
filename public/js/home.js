@@ -64,7 +64,7 @@ async function live() {
   try {
     const r = await api("/tools/onchain_pools?kind=trending&limit=8");
     trending = r.pools;
-    $("#paneLive").innerHTML = r.pools.map((p) => `<a class="mini" href="/app/#/token?address=${esc(p.token.address || "")}"><span class="token-cell">${avatar(p.token.symbol, p.token.address)}<span><b>${esc(p.token.symbol)}</b><small>${esc(p.dex)}</small></span></span><span class="num">${fmtPrice(p.priceUsd)}<br><small class="muted">${usd(p.volume24hUsd)}</small></span><span class="num">${signed(p.change.h24)}</span></a>`).join("");
+    $("#paneLive").innerHTML = r.pools.map((p) => `<a class="mini" href="/app/#/token?address=${esc(p.token.address || "")}"><span class="token-cell">${avatar(p.token.symbol, p.token.address, p.token.image)}<span><b>${esc(p.token.symbol)}</b><small>${esc(p.dex)}</small></span></span><span class="num">${fmtPrice(p.priceUsd)}<br><small class="muted">${usd(p.volume24hUsd)}</small></span><span class="num">${signed(p.change.h24)}</span></a>`).join("");
     $("#paneLiveUpd").textContent = new Date(r.updatedAt).toLocaleTimeString();
     const names = r.pools.slice(0, 3).map((p) => `${p.token.symbol} (${p.change.h24 != null ? (p.change.h24 > 0 ? "+" : "") + p.change.h24.toFixed(1) + "%" : "–"})`);
     $("#paneChatTrending").textContent = `Top trending right now: ${names.join(", ")}. Want me to run the Checkpoint on one?`;

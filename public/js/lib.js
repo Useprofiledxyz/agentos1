@@ -53,12 +53,12 @@ export function ago(iso) {
 const ETH_LIKE = new Set(["0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "0x0bd7d308f8e1639fab988df18a8011f41eacad73"]);
 
 /** Token or stock logo from /api/logo (cached by the CDN; a generated avatar when no logo exists). Letters show while it loads. */
-export function avatar(sym, address) {
+export function avatar(sym, address, image) {
   const letters = esc(String(sym || "?").replace(/[^\p{L}\p{N}]/gu, "").slice(0, 2).toUpperCase() || "?");
   const ok = /^0x[0-9a-fA-F]{40}$/.test(String(address || ""));
   const a = ok ? address.toLowerCase() : "";
   // ETH and WETH ship with the site, so they never wait on a lookup
-  const src = ETH_LIKE.has(a) || (!ok && /^w?eth$/i.test(String(sym || ""))) ? "/img/eth.svg" : ok ? `/api/logo/${esc(a)}?s=${encodeURIComponent(String(sym || "").slice(0, 12))}` : "";
+  const src = ETH_LIKE.has(a) || (!ok && /^w?eth$/i.test(String(sym || ""))) ? "/img/eth.svg" : ok ? `/api/logo/${esc(a)}?s=${encodeURIComponent(String(sym || "").slice(0, 12))}${image && /^https:\/\//.test(image) ? `&u=${encodeURIComponent(image)}` : ""}` : "";
   return `<span class="avatar">${letters}${src ? `<img src="${src}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ""}</span>`;
 }
 
