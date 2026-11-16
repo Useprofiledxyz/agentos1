@@ -50,6 +50,7 @@ export function ago(iso) {
   return s < 60 ? `${Math.floor(s)}s` : s < 3600 ? `${Math.floor(s / 60)}m` : s < 86400 ? `${Math.floor(s / 3600)}h` : `${Math.floor(s / 86400)}d`;
 }
 
+export const QUILL_CA = "0x1fd310d062ba82483df3fcd4f1c49a8ee5211c4f";
 const ETH_LIKE = new Set(["0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "0x0bd7d308f8e1639fab988df18a8011f41eacad73"]);
 
 /** Token or stock logo from /api/logo (cached by the CDN; a generated avatar when no logo exists). Letters show while it loads. */
@@ -58,7 +59,7 @@ export function avatar(sym, address, image, opts = {}) {
   const ok = /^0x[0-9a-fA-F]{40}$/.test(String(address || ""));
   const a = ok ? address.toLowerCase() : "";
   // ETH and WETH ship with the site, so they never wait on a lookup
-  const src = ETH_LIKE.has(a) || (!ok && /^w?eth$/i.test(String(sym || ""))) ? "/img/eth.svg" : ok ? `/api/logo/${esc(a)}?s=${encodeURIComponent(String(sym || "").slice(0, 12))}${image && /^https:\/\//.test(image) ? `&u=${encodeURIComponent(image)}` : ""}` : "";
+  const src = a === QUILL_CA ? "/img/quill.svg" : ETH_LIKE.has(a) || (!ok && /^w?eth$/i.test(String(sym || ""))) ? "/img/eth.svg" : ok ? `/api/logo/${esc(a)}?s=${encodeURIComponent(String(sym || "").slice(0, 12))}${image && /^https:\/\//.test(image) ? `&u=${encodeURIComponent(image)}` : ""}` : "";
   // Company logos are not round artwork: fit them whole on a matching backdrop instead of cropping them.
   const stock = opts.stock ?? stockSet().has(a);
   return `<span class="avatar${stock ? " is-stock" : ""}">${letters}${src ? `<img src="${src}" alt="" loading="lazy" decoding="async"${stock ? ' onload="qFitLogo(this)"' : ""} onerror="this.remove()">` : ""}</span>`;
@@ -168,3 +169,14 @@ export function checkpointHtml(gate) {
       <li><span class="tag ${esc(c.status)}">${esc(c.status)}</span><span class="lbl">${esc(c.label)}</span><span class="det">${esc(c.detail)}</span></li>`).join("")}
     </ul>`;
 }
+
+// Click-to-copy for anything with data-copy (the $QUILL contract address).
+document.addEventListener("click", async (e) => {
+  const el = e.target.closest("[data-copy]");
+  if (!el) return;
+  try { await navigator.clipboard.writeText(el.dataset.copy); } catch {
+    const t = document.createElement("textarea"); t.value = el.dataset.copy; document.body.append(t); t.select(); document.execCommand("copy"); t.remove();
+  }
+  el.classList.add("copied"); setTimeout(() => el.classList.remove("copied"), 1400);
+  if (document.getElementById("toast")) toast("Contract address copied");
+});

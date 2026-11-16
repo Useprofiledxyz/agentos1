@@ -207,3 +207,13 @@ body.home a { color: inherit; }
   .receipts td, .receipts th { padding: 12px 6px; }
 }
 @media (prefers-reduced-motion: reduce) { .rv, .mega span, .whispers li { opacity: 1 !important; transform: none !important; filter: none !important; animation: none !important; } }
+
+.hero-left { display: flex; flex-direction: column; gap: 18px; max-width: 520px; min-width: 0; }
+.hero-ca { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; max-width: 100%; }
+.hero-ca > span { font: 600 11px/1 var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
+.ca-line { display: inline-flex; align-items: center; gap: 12px; padding: 11px 16px; border-radius: 999px; border: 1px solid var(--line-2); background: rgba(239,234,223,.04); color: var(--fg); cursor: pointer; font-size: 13.5px; max-width: 100%; }
+.ca-line .mono { overflow: hidden; text-overflow: ellipsis; }
+.ca-line i { font-style: normal; font: 600 11px var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
+.ca-line:hover { border-color: var(--accent); }
+.hero-foot { align-items: flex-end; }
+@media (max-width: 640px) { .ca-line { font-size: 11px; padding: 10px 12px; } }

@@ -176,3 +176,13 @@ pre.code { background: var(--bg-2); color: var(--text-2); border: 1px solid var(
 /* company logos: whole, centered, on a backdrop chosen per logo */
 .avatar img.fit { object-fit: contain; padding: 16%; }
 .avatar.is-stock { background: var(--panel-2); color: transparent; }
+
+/* $QUILL contract address */
+.ca-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 13px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--panel); color: var(--text-2); font: 12px var(--mono); cursor: pointer; white-space: nowrap; transition: border-color .15s, color .15s; }
+.ca-chip b { color: var(--teal); font: 700 11px var(--sans); letter-spacing: .12em; }
+.ca-chip:hover { border-color: var(--teal); color: var(--text); }
+.ca-copy { font-style: normal; opacity: .6; }
+[data-copy].copied .ca-copy::after, [data-copy].copied i::after { content: " ✓"; color: var(--up); }
+.ca-side { justify-content: flex-start; width: 100%; }
+.ca-inline { background: none; border: 0; padding: 0; color: inherit; font-size: 12px; cursor: pointer; text-decoration: underline dotted; }
+.ca-inline.copied { color: var(--up); }
