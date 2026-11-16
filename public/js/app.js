@@ -46,9 +46,11 @@ async function boot() {
 async function tickBlock() {
   try {
     const s = await api("/tools/chain_status");
-    $("#blockNum").textContent = `Block #${s.block.toLocaleString("en-US")}`;
-    $("#blockPill").title = `Robinhood Chain block ${s.block}, ${s.ageSec}s ago, base fee ${s.baseFeeGwei?.toFixed(4)} gwei`;
-  } catch { $("#blockNum").textContent = "offline"; }
+    $("#blockNum").textContent = "Robinhood Chain · live";
+    $("#blockPill").title = `Live on Robinhood Chain. Latest block #${s.block.toLocaleString("en-US")}, ${s.ageSec}s ago, base fee ${s.baseFeeGwei?.toFixed(4)} gwei. Click to open it in the explorer.`;
+    $("#blockPill").href = `https://robinhoodchain.blockscout.com/block/${s.block}`;
+    $("#blockPill").classList.remove("offline");
+  } catch { $("#blockNum").textContent = "Robinhood Chain · offline"; $("#blockPill").classList.add("offline"); }
 }
 
 function renderWallet() {

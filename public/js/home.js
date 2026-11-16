@@ -50,7 +50,13 @@ show(0);
 
 // ---- live data ----
 async function block() {
-  try { const s = await api("/tools/chain_status"); $("#navBlock").textContent = `Block #${s.block.toLocaleString("en-US")}`; } catch {}
+  const el = $("#navLive");
+  try {
+    const s = await api("/tools/chain_status");
+    el.title = `Live on Robinhood Chain. Latest block #${s.block.toLocaleString("en-US")}, ${s.ageSec}s ago. Click to open it in the explorer.`;
+    el.href = `https://robinhoodchain.blockscout.com/block/${s.block}`;
+    el.classList.remove("offline");
+  } catch { el.title = "Robinhood Chain is not answering right now"; el.classList.add("offline"); }
 }
 
 let trending = [];

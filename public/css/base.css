@@ -168,3 +168,7 @@ pre.code { background: var(--bg-2); color: var(--text-2); border: 1px solid var(
 .card li, .panel li, .panel td, .panel p { overflow-wrap: anywhere; }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* live chip when the chain does not answer */
+.offline .live-dot { background: var(--down); }
+.offline .live-dot::after { border-color: var(--down); }
