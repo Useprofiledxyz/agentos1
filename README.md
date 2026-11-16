@@ -60,6 +60,15 @@ Offline demo with simulated quotes and chain reads (also what the tests use):
 npm run mock
 ```
 
+## Deploy
+
+Quill is one Node server (static app + API), so deploy it as a **Node web service**, not as a static site (Vercel static, Netlify, GitHub Pages would serve the page without its API).
+
+- Start command: `npm start` (Railway reads `railway.json`, health check `/api/health`).
+- The platform's `PORT` is used and the server listens on `0.0.0.0`; proxy headers are trusted automatically on Railway, Render, Fly and Heroku.
+- Variables: `ANTHROPIC_API_KEY` for the AI chat (optional). Do **not** set `QUILL_MOCK` in production.
+- Storage: limits, journal and API token hashes live in `data/`. Mount a volume and set `QUILL_DATA` to it, or they reset on every redeploy.
+
 ## API
 
 Read tools are public. Prepare needs an API token; execute needs the `execute` scope and an `Idempotency-Key`. Tokens are stored hashed and start in dry-run.

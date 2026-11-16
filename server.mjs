@@ -15,9 +15,12 @@ import { TOOL_MAP, coerceArgs, publicToolList } from "./src/tools.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(here, "public");
+// Hosting platforms (Railway, Render, Fly, Heroku…) set PORT and route traffic through their proxy, so the server must
+// listen on all interfaces there. Locally it stays on 127.0.0.1 unless HOST says otherwise.
+const ON_PLATFORM = !!(process.env.PORT || process.env.RAILWAY_ENVIRONMENT || process.env.RENDER || process.env.FLY_APP_NAME || process.env.DYNO);
 const PORT = Number(process.env.PORT || 9330);
-const HOST = process.env.HOST || "127.0.0.1";
-const TRUST_PROXY = process.env.TRUST_PROXY === "1";
+const HOST = process.env.HOST || (ON_PLATFORM ? "0.0.0.0" : "127.0.0.1");
+const TRUST_PROXY = process.env.TRUST_PROXY ? process.env.TRUST_PROXY === "1" : ON_PLATFORM;
 
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json", ".png": "image/png", ".ico": "image/x-icon", ".woff2": "font/woff2" };
 const json = (v) => JSON.stringify(v, (_k, x) => (typeof x === "bigint" ? x.toString() : x));
@@ -52,7 +55,8 @@ async function api(req, res, url) {
   if (p === "/auth/nonce" && req.method === "POST") return send(res, 200, newNonce((await body(req)).address, req.headers.host));
   if (p === "/auth/verify" && req.method === "POST") {
     const v = verifyLogin(await body(req));
-    return send(res, 200, { address: v.address }, { "set-cookie": sessionCookie(v.token) });
+    const https = TRUST_PROXY && String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim() === "https";
+    return send(res, 200, { address: v.address }, { "set-cookie": sessionCookie(v.token, { secure: https }) });
   }
   if (p === "/auth/me") return send(res, 200, { address: wallet });
   if (p === "/auth/logout" && req.method === "POST") { logout(req); return send(res, 200, { ok: true }, { "set-cookie": clearCookie() }); }
@@ -148,5 +152,6 @@ export const server = createServer(async (req, res) => {
 });
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  process.on("SIGTERM", () => server.close(() => process.exit(0)));
   server.listen(PORT, HOST, () => console.log(`Quill on http://${HOST}:${PORT}  (AI chat: ${llmOn() ? "on" : "off, parser mode"}${MOCK ? ", MOCK data" : ""})`));
 }

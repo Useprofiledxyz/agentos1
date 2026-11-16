@@ -51,8 +51,8 @@ export function verifyLogin({ nonce, signature }) {
   return { token, address: addr };
 }
 
-export function sessionCookie(token) {
-  return `${COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_MS / 1000}${SECURE ? "; Secure" : ""}`;
+export function sessionCookie(token, { secure = false } = {}) {
+  return `${COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_MS / 1000}${SECURE || secure ? "; Secure" : ""}`;
 }
 export const clearCookie = () => `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
 

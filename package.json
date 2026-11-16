@@ -9,6 +9,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "start": "node server.mjs",
     "serve": "node server.mjs",
     "dev": "node --watch-path=src --watch-path=server.mjs server.mjs",
     "mock": "QUILL_MOCK=1 node server.mjs",
