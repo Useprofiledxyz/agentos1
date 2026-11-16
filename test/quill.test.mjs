@@ -241,3 +241,26 @@ test("logo endpoint always returns an image", async () => {
   assert.doesNotMatch(evil, /<b>/);
   assert.equal((await fetch(base + "/api/logo/nope")).status, 404);
 });
+
+test("AI chat: workspace header is sent, and an API error falls back to command mode", async () => {
+  const { createServer } = await import("node:http");
+  const seen = [];
+  const fake = createServer((req, res) => {
+    seen.push(req.headers["anthropic-workspace-id"] || null);
+    res.writeHead(400, { "content-type": "application/json", "request-id": "req_test" });
+    res.end(JSON.stringify({ type: "error", error: { type: "invalid_request_error", message: "This API key is not scoped to a workspace, so this request must include the anthropic-workspace-id header." } }));
+  });
+  await new Promise((r) => fake.listen(0, "127.0.0.1", r));
+  Object.assign(process.env, { ANTHROPIC_API_KEY: "sk-ant-test", ANTHROPIC_BASE_URL: `http://127.0.0.1:${fake.address().port}`, ANTHROPIC_WORKSPACE_ID: "wrkspc_test" });
+  try {
+    const r = await call("/api/chat", { method: "POST", body: { message: "buy TSLA with 0.01 ETH" } });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.mode, "parser");
+    assert.match(r.json.reply, /AI chat is unavailable: .*workspace/);
+    assert.equal(r.json.tickets.length, 1, "command mode still prepares the ticket");
+    assert.equal(seen[0], "wrkspc_test");
+  } finally {
+    for (const k of ["ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL", "ANTHROPIC_WORKSPACE_ID"]) delete process.env[k];
+    fake.close();
+  }
+});

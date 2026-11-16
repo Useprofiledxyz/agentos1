@@ -12,7 +12,22 @@ const EFFORT = process.env.QUILL_EFFORT || "medium";
 export const llmOn = () => !!(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN) && process.env.QUILL_LLM !== "0";
 
 let client;
-const getClient = () => (client ??= new Anthropic());
+// ANTHROPIC_WORKSPACE_ID is only needed for API keys that are not scoped to a workspace.
+const getClient = () => (client ??= new Anthropic(
+  process.env.ANTHROPIC_WORKSPACE_ID ? { defaultHeaders: { "anthropic-workspace-id": process.env.ANTHROPIC_WORKSPACE_ID } } : {},
+));
+
+/** A short, user-facing reason for an Anthropic API failure (details stay in the server log). */
+function aiProblem(e) {
+  const msg = String(e?.error?.error?.message || e?.message || "");
+  if (/workspace/i.test(msg)) return "the server's Anthropic API key is not scoped to a workspace (set ANTHROPIC_WORKSPACE_ID or use a workspace key)";
+  if (e instanceof Anthropic.AuthenticationError) return "the server's Anthropic API key was rejected";
+  if (e instanceof Anthropic.PermissionDeniedError) return "the server's Anthropic API key lacks access to this model";
+  if (e instanceof Anthropic.RateLimitError) return "the AI is rate limited right now";
+  if (e instanceof Anthropic.APIConnectionError) return "the AI service could not be reached";
+  if (e instanceof Anthropic.APIError && /credit|billing|balance/i.test(msg)) return "the Anthropic account is out of credit";
+  return "the AI service returned an error";
+}
 
 const SYSTEM = `You are Quill, the assistant in front of an on-chain trading desk. Home chain: Robinhood Chain (chain 4663, gas in ETH), with WETH, USDG and tokenized stocks and ETFs (NVDA, TSLA, SPY…). Base, Arbitrum and Ethereum are also available. Swaps route through KyberSwap; Hyperliquid market data is read-only.
 
@@ -78,8 +93,10 @@ export async function chat({ sessionId, message, address, ip }) {
   }
 
   const { id, s } = session(sessionId);
+  const mark = s.messages.length;
   s.messages.push({ role: "user", content: address ? `${text}\n\n(connected wallet: ${address})` : text });
   let reply = "";
+  try {
   for (let step = 0; step < 8; step++) {
     const res = await getClient().beta.messages.create({
       model: MODEL,
@@ -110,6 +127,14 @@ export async function chat({ sessionId, message, address, ip }) {
     }));
     s.messages.push({ role: "user", content: results });
     if (step === 7) reply = textOut || "I stopped after several tool calls. Ask again with more detail.";
+  }
+  } catch (e) {
+    if (!(e instanceof Anthropic.APIError)) throw e;
+    // Keep the conversation consistent (drop this turn) and answer in command mode instead of showing a raw error.
+    s.messages.length = mark;
+    console.error("Anthropic API error:", e.status, String(e.message).slice(0, 300));
+    const r = await parseAndRun(text, ctx, onResult);
+    return { sessionId: id, reply: `(AI chat is unavailable: ${aiProblem(e)}. Answering in command mode.)\n\n${r}`, tickets, tools: used, mode: "parser", aiError: aiProblem(e) };
   }
   return { sessionId: id, reply, tickets, tools: used, mode: "llm", model: MODEL };
 }
