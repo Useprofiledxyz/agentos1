@@ -6,6 +6,7 @@ import { CHAINS, NATIVE } from "./chains.mjs";
 import { MOCK } from "./mock.mjs";
 import { rpc, rpcBatch } from "./rpc.mjs";
 import { formatUnits } from "./units.mjs";
+import { remember } from "./logos.mjs";
 
 const GECKO = "https://api.geckoterminal.com/api/v2";
 const NET = "robinhood";
@@ -17,6 +18,9 @@ const GAP_MS = Number(process.env.GECKO_GAP_MS) || 2100;
 let queue = Promise.resolve(), lastCall = 0;
 const cache = new Map();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** geckoGet(pathQs, ttlMs) → { data, stale } through the shared paced queue (also used by logos.mjs). */
+export const geckoGet = (pathQs, ttlMs) => gecko(pathQs, ttlMs);
 
 async function gecko(pathQs, ttlMs = 30_000) {
   const hit = cache.get(pathQs);
@@ -61,6 +65,7 @@ function normPools(json) {
     const a = p.attributes, base = tokens.get(p.relationships?.base_token?.data?.id) || {};
     const tx = a.transactions?.h24 || {};
     const stock = STOCKS.find((s) => s.address.toLowerCase() === String(base.address || "").toLowerCase());
+    if (base.address && base.image_url) remember(base.address, base.image_url);
     return {
       pool: a.address, name: a.name, dex: dexName(p.relationships?.dex?.data?.id), dexId: p.relationships?.dex?.data?.id || null,
       token: { address: base.address || null, symbol: base.symbol || a.name?.split(" / ")[0] || "?", name: base.name || null, image: base.image_url || null, stock: !!stock },

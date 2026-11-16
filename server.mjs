@@ -8,6 +8,7 @@ import { findToken } from "./src/apitokens.mjs";
 import { clearCookie, logout, newNonce, sessionAddress, sessionCookie, verifyLogin } from "./src/auth.mjs";
 import { publicChains } from "./src/chains.mjs";
 import { secretSource } from "./src/seal.mjs";
+import { logoResponse } from "./src/logos.mjs";
 import { buildTicket, getIntent, markSent, prepareSwap } from "./src/intents.mjs";
 import { readJournal } from "./src/journal.mjs";
 import { MOCK } from "./src/mock.mjs";
@@ -67,6 +68,14 @@ async function api(req, res, url) {
 
   if (p === "/health") return send(res, 200, { ok: true, llm: llmOn(), mock: MOCK, secret: secretSource, chains: publicChains().map((c) => c.key) });
   if (p === "/chains") return send(res, 200, publicChains());
+
+  // GET /api/logo/:address?s=SYMBOL — token or stock logo (proxied image, or a generated avatar).
+  const lg = p.match(/^\/logo\/(0x[0-9a-fA-F]{40})(?:\.png)?$/);
+  if (lg && (req.method === "GET" || req.method === "HEAD")) {
+    const r = await logoResponse(lg[1], String(q.s || "").slice(0, 12));
+    res.writeHead(r.status, r.headers);
+    return res.end(req.method === "HEAD" ? undefined : r.body);
+  }
   if (p === "/tools" && req.method === "GET") return send(res, 200, publicToolList());
 
   // GET /api/tools/:name?arg=… (read) · POST /api/tools/:name {args} (prepare/execute with x-api-key)

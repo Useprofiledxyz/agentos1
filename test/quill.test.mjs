@@ -228,3 +228,16 @@ test("homepage and app shell are served", async () => {
   const app = await fetch(base + "/app/");
   assert.match(await app.text(), /Onchain live/);
 });
+
+test("logo endpoint always returns an image", async () => {
+  const r = await fetch(base + "/api/logo/0x0000000000000000000000000000000000000abc?s=ZZ");
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get("content-type"), /^image\//);
+  assert.match(r.headers.get("cache-control"), /public/);
+  const svg = await r.text();
+  assert.match(svg, /<svg/);
+  assert.doesNotMatch(svg, /<script/i);
+  const evil = await (await fetch(base + "/api/logo/0x0000000000000000000000000000000000000abd?s=" + encodeURIComponent("<b>&"))).text();
+  assert.doesNotMatch(evil, /<b>/);
+  assert.equal((await fetch(base + "/api/logo/nope")).status, 404);
+});

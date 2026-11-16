@@ -46,7 +46,7 @@ async function boot() {
 async function tickBlock() {
   try {
     const s = await api("/tools/chain_status");
-    $("#blockNum").textContent = `#${s.block.toLocaleString("en-US")}`;
+    $("#blockNum").textContent = `Block #${s.block.toLocaleString("en-US")}`;
     $("#blockPill").title = `Robinhood Chain block ${s.block}, ${s.ageSec}s ago, base fee ${s.baseFeeGwei?.toFixed(4)} gwei`;
   } catch { $("#blockNum").textContent = "offline"; }
 }
@@ -94,7 +94,7 @@ function poolRows(pools, { showAge = false } = {}) {
     <th class="num">Volume</th><th class="num hide-sm">Liquidity</th><th class="num hide-sm">${showAge ? "Age" : "FDV"}</th><th class="num hide-sm">Txns</th></tr></thead><tbody>
     ${pools.map((p) => `
     <tr class="clickable" data-token="${esc(p.token.address || "")}">
-      <td><div class="token-cell">${avatar(p.token.symbol, p.token.image)}<div><b>${esc(p.token.symbol)}${p.token.stock ? ' <span class="tag neutral">stock</span>' : ""}</b><small>${esc(p.dex)}${p.token.name && p.token.name !== p.token.symbol ? ` · ${esc(p.token.name)}` : ""}</small></div></div></td>
+      <td><div class="token-cell">${avatar(p.token.symbol, p.token.address)}<div><b>${esc(p.token.symbol)}${p.token.stock ? ' <span class="tag neutral">stock</span>' : ""}</b><small>${esc(p.dex)}${p.token.name && p.token.name !== p.token.symbol ? ` · ${esc(p.token.name)}` : ""}</small></div></div></td>
       <td class="num">${fmtPrice(p.priceUsd)}</td>
       <td class="num hide-sm">${signed(p.change.m5)}</td><td class="num">${signed(p.change.h1)}</td><td class="num">${signed(p.change.h24)}</td>
       <td class="num">${usd(p.volume24hUsd)}</td><td class="num hide-sm">${usd(p.liquidityUsd)}</td>
@@ -167,7 +167,7 @@ function desk() {
     try {
       const r = await api("/tools/stock_prices");
       const pick = r.stocks.filter((s) => s.priceUsd != null).sort((a, b) => (b.volume24hUsd || 0) - (a.volume24hUsd || 0)).slice(0, 6);
-      $("#deskStocks").innerHTML = pick.map((s) => `<a class="row between" href="#/token?address=${esc(s.address)}" style="padding:8px 0;border-bottom:1px solid var(--line)"><span class="token-cell">${avatar(s.symbol)}<span><b>${esc(s.symbol)}</b><small>${esc(s.name)}</small></span></span><span class="num" style="text-align:right">${fmtPrice(s.priceUsd)}<br>${signed(s.change24hPct)}</span></a>`).join("");
+      $("#deskStocks").innerHTML = pick.map((s) => `<a class="row between" href="#/token?address=${esc(s.address)}" style="padding:8px 0;border-bottom:1px solid var(--line)"><span class="token-cell">${avatar(s.symbol, s.address)}<span><b>${esc(s.symbol)}</b><small>${esc(s.name)}</small></span></span><span class="num" style="text-align:right">${fmtPrice(s.priceUsd)}<br>${signed(s.change24hPct)}</span></a>`).join("");
     } catch (e) { $("#deskStocks").innerHTML = errorBox(e); }
   };
   stats(); trending(); st();
@@ -195,21 +195,23 @@ function newPairs() {
 function stocksView() {
   view.innerHTML = head(`Tokenized <em>stocks</em>`, "Stocks and ETFs on Robinhood Chain with prices from their on-chain pools. Buy any of them with ETH or USDG.")
     + `<div class="card"><div class="row between" style="margin-bottom:12px"><input id="stockFilter" placeholder="Filter: NVDA, Tesla, ETF…" style="max-width:280px"><span class="muted" id="stockCount" style="font-size:13px"></span></div><div id="stockTable"><div class="skeleton"></div></div></div>`;
-  let rows = [];
+  // Names and logos are known up front; prices fill in when they arrive.
+  let rows = (state.chains.find((c) => c.key === "robinhood")?.stocks || []).map((s) => ({ ...s, priceUsd: null, change24hPct: null, volume24hUsd: null }));
   const render = () => {
     const f = $("#stockFilter").value.trim().toLowerCase();
     const list = rows.filter((s) => !f || s.symbol.toLowerCase().includes(f) || s.name.toLowerCase().includes(f));
     $("#stockCount").textContent = `${list.length} of ${rows.length}`;
     $("#stockTable").innerHTML = `<div class="table-wrap"><table><thead><tr><th>Stock</th><th class="num">Price</th><th class="num">24h</th><th class="num">Volume</th><th class="num"></th></tr></thead><tbody>${list.map((s) => `
-      <tr class="clickable" data-token="${esc(s.address)}"><td><div class="token-cell">${avatar(s.symbol)}<div><b>${esc(s.symbol)}</b><small>${esc(s.name)}</small></div></div></td>
+      <tr class="clickable" data-token="${esc(s.address)}"><td><div class="token-cell">${avatar(s.symbol, s.address)}<div><b>${esc(s.symbol)}</b><small>${esc(s.name)}</small></div></div></td>
       <td class="num">${fmtPrice(s.priceUsd)}</td><td class="num">${signed(s.change24hPct)}</td><td class="num">${usd(s.volume24hUsd)}</td>
       <td class="num"><a class="btn sm" href="#/swap?in=ETH&out=${esc(s.symbol)}" onclick="event.stopPropagation()">Buy</a></td></tr>`).join("")}</tbody></table></div>`;
     bindTokenRows($("#stockTable"));
   };
   const load = async () => {
     try { const r = await api("/tools/stock_prices"); rows = r.stocks.sort((a, b) => (b.volume24hUsd || 0) - (a.volume24hUsd || 0)); render(); }
-    catch (e) { $("#stockTable").innerHTML = errorBox(e); }
+    catch { setTimeout(() => { if (location.hash.startsWith("#/stocks")) load(); }, 15000); }
   };
+  if (rows.length) render();
   $("#stockFilter").oninput = render;
   load(); every(60000, load);
 }
@@ -224,7 +226,7 @@ async function tokenView(q) {
   try {
     const t = await api(`/tools/onchain_token?address=${encodeURIComponent(address)}`);
     const m = t.main;
-    $("#tokHead").innerHTML = `<div class="page-head" style="margin:0"><div class="token-hero">${avatar(t.token?.symbol, t.token?.image)}<div><h1>${esc(t.token?.symbol || short(address))}</h1><span class="muted">${esc(t.token?.name || "")} · <span class="mono">${esc(short(address))}</span></span></div></div>
+    $("#tokHead").innerHTML = `<div class="page-head" style="margin:0"><div class="token-hero">${avatar(t.token?.symbol, address)}<div><h1>${esc(t.token?.symbol || short(address))}</h1><span class="muted">${esc(t.token?.name || "")} · <span class="mono">${esc(short(address))}</span></span></div></div>
       <div class="row">${m ? `<div style="text-align:right"><div class="price-big">${fmtPrice(m.priceUsd)}</div><div>${signed(m.change.h24)} <span class="muted">24h</span></div></div>` : ""}
       <a class="btn primary" href="#/swap?in=ETH&out=${esc(address)}">Swap</a><a class="btn ghost" href="${esc(t.explorer)}" target="_blank" rel="noopener">Explorer ↗</a></div></div>
       ${t.totals ? `<div class="stats" style="margin-top:20px">${[["Volume 24h", usd(t.totals.volume24hUsd), `across ${t.totals.pools} pool${t.totals.pools > 1 ? "s" : ""}`], ["Liquidity", usd(t.totals.liquidityUsd), "all pools"], ["FDV", usd(m.fdvUsd), m.marketCapUsd ? `mcap ${usd(m.marketCapUsd)}` : ""], ["Txns 24h", `<span class="up">${t.totals.buys24h.toLocaleString("en-US")}</span><span class="faint"> / </span><span class="down">${t.totals.sells24h.toLocaleString("en-US")}</span>`, "buys / sells"]].map(([k, v, s]) => `<div class="card stat"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join("")}</div>` : ""}`;
@@ -296,7 +298,7 @@ function check(q) {
     try {
       const r = await api(`/tools/check_token?${new URLSearchParams({ chain: state.chain, address: a })}`);
       out.innerHTML = `<div class="card">
-        <div class="panel-head"><div class="token-cell">${avatar(r.swap?.tokenOut?.symbol)}<div><b style="font-size:18px">${esc(r.swap?.tokenOut?.symbol || "Token")}</b><small class="mono">${esc(short(a))}</small></div></div>
+        <div class="panel-head"><div class="token-cell">${avatar(r.swap?.tokenOut?.symbol, a)}<div><b style="font-size:18px">${esc(r.swap?.tokenOut?.symbol || "Token")}</b><small class="mono">${esc(short(a))}</small></div></div>
         ${r.health ? `<span class="mono muted">score <b style="color:var(--text)">${r.health.score}</b>/100</span>` : ""}</div>
         ${checkpointHtml(r)}
         ${r.health?.flags?.length ? `<div style="margin-top:16px">${r.health.flags.map((f) => `<div style="padding:4px 0"><span class="tag ${f.severity === "info" ? "info" : f.severity}">${esc(f.severity)}</span> ${esc(f.text)}</div>`).join("")}</div>` : ""}
@@ -318,7 +320,7 @@ async function portfolio() {
         <div class="card stat"><div class="k">Positions</div><div class="v">${p.holdings.length}</div><div class="s">ETH, USDG and stocks</div></div>
         <div class="card stat"><div class="k">Network</div><div class="v" style="font-size:20px">Robinhood Chain</div><div class="s">chain 4663</div></div></div>
       <div class="card">${p.holdings.length ? `<div class="table-wrap"><table><thead><tr><th>Asset</th><th class="num">Amount</th><th class="num">Price</th><th class="num">Value</th><th class="num"></th></tr></thead><tbody>${p.holdings.map((h) => `
-        <tr><td><div class="token-cell">${avatar(h.symbol)}<div><b>${esc(h.symbol)}</b><small>${esc(h.name || (h.stock ? "Tokenized stock" : ""))}</small></div></div></td>
+        <tr><td><div class="token-cell">${avatar(h.symbol, h.address)}<div><b>${esc(h.symbol)}</b><small>${esc(h.name || (h.stock ? "Tokenized stock" : ""))}</small></div></div></td>
         <td class="num">${h.amount.toLocaleString("en-US", { maximumFractionDigits: 6 })}</td><td class="num">${fmtPrice(h.priceUsd)}</td><td class="num">${usd(h.valueUsd)}</td>
         <td class="num"><a class="btn sm" href="#/swap?in=${esc(h.symbol)}&out=${h.symbol === "USDG" ? "ETH" : "USDG"}">Trade</a></td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Nothing found among ETH, WETH, USDG and tokenized stocks.</div>`}
         <p class="muted" style="font-size:12.5px;margin:14px 0 0">${esc(p.note)}</p></div>`;

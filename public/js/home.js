@@ -38,15 +38,15 @@ setInterval(() => {
 async function block() {
   try {
     const s = await api("/tools/chain_status");
-    $("#navBlock").textContent = `#${s.block.toLocaleString("en-US")}`;
+    $("#navBlock").textContent = `Block #${s.block.toLocaleString("en-US")}`;
     $("#sBlock").textContent = `#${s.block.toLocaleString("en-US")}`;
     $("#sBlockAge").textContent = `${s.ageSec}s ago · ${s.txCount ?? "–"} txs`;
     $("#sFee").textContent = s.baseFeeGwei != null ? s.baseFeeGwei.toFixed(4) : "–";
   } catch { $("#navBlock").textContent = "Robinhood Chain"; }
 }
 
-const tickerItem = (p) => `<a class="tk" href="/app/#/token?address=${esc(p.token.address || "")}">${avatar(p.token.symbol, p.token.image)}<b>${esc(p.token.symbol)}</b><span class="p">${fmtPrice(p.priceUsd)}</span>${signed(p.change.h24)}</a>`;
-const miniRow = (p, right) => `<a class="mini-row" href="/app/#/token?address=${esc(p.token.address || "")}"><span class="token-cell">${avatar(p.token.symbol, p.token.image)}<span><b>${esc(p.token.symbol)}</b><small>${esc(p.dex)}</small></span></span>${right}</a>`;
+const tickerItem = (p) => `<a class="tk" href="/app/#/token?address=${esc(p.token.address || "")}">${avatar(p.token.symbol, p.token.address)}<b>${esc(p.token.symbol)}</b><span class="p">${fmtPrice(p.priceUsd)}</span>${signed(p.change.h24)}</a>`;
+const miniRow = (p, right) => `<a class="mini-row" href="/app/#/token?address=${esc(p.token.address || "")}"><span class="token-cell">${avatar(p.token.symbol, p.token.address)}<span><b>${esc(p.token.symbol)}</b><small>${esc(p.dex)}</small></span></span>${right}</a>`;
 
 async function market() {
   try {
@@ -78,7 +78,7 @@ async function stocks() {
     const r = await api("/tools/stock_prices");
     $("#stockCount").textContent = r.stocks.length;
     const pick = r.stocks.filter((s) => s.priceUsd != null).sort((a, b) => (b.volume24hUsd || 0) - (a.volume24hUsd || 0)).slice(0, 12);
-    $("#homeStocks").innerHTML = pick.map((s) => `<a class="stock" href="/app/#/swap?in=ETH&out=${esc(s.symbol)}"><div class="token-cell">${avatar(s.symbol)}<div><b>${esc(s.symbol)}</b><small>${esc(s.name)}</small></div></div><div class="p">${fmtPrice(s.priceUsd)}</div>${signed(s.change24hPct)}</a>`).join("");
+    $("#homeStocks").innerHTML = pick.map((s) => `<a class="stock" href="/app/#/swap?in=ETH&out=${esc(s.symbol)}"><div class="token-cell">${avatar(s.symbol, s.address)}<div><b>${esc(s.symbol)}</b><small>${esc(s.name)}</small></div></div><div class="p">${fmtPrice(s.priceUsd)}</div>${signed(s.change24hPct)}</a>`).join("");
     if (!pick.length) throw new Error("no prices yet");
   } catch {
     if (!$("#homeStocks .stock")) $("#homeStocks").innerHTML = `<div class="empty" style="grid-column:1/-1">Reconnecting to live prices… <span class="spinner"></span></div>`;

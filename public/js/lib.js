@@ -50,9 +50,11 @@ export function ago(iso) {
   return s < 60 ? `${Math.floor(s)}s` : s < 3600 ? `${Math.floor(s / 60)}m` : s < 86400 ? `${Math.floor(s / 3600)}h` : `${Math.floor(s / 86400)}d`;
 }
 
-export function avatar(sym, img) {
+/** Token or stock logo from /api/logo (cached by the CDN; a generated avatar when no logo exists). Letters show while it loads. */
+export function avatar(sym, address) {
   const letters = esc(String(sym || "?").replace(/[^\p{L}\p{N}]/gu, "").slice(0, 2).toUpperCase() || "?");
-  return `<span class="avatar">${letters}${img && /^https:\/\//.test(img) ? `<img src="${esc(img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}</span>`;
+  const ok = /^0x[0-9a-fA-F]{40}$/.test(String(address || ""));
+  return `<span class="avatar">${letters}${ok ? `<img src="/api/logo/${esc(address.toLowerCase())}?s=${encodeURIComponent(String(sym || "").slice(0, 12))}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ""}</span>`;
 }
 
 let toastTimer;
