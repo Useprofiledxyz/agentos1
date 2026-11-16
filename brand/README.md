@@ -4,7 +4,8 @@
 |---|---|
 | `quill-mark.svg` | The logo mark (vector). Also the site favicon (`public/img/quill.svg`). |
 | `profile-400.png` | X / Telegram profile picture, 400×400. |
-| `x-banner-1500x500.png` (`@2x`) | X header. The bottom-left is kept clear for the profile picture. |
+| `x-banner-1500x500.png` (`@2x`) | X header, first version. The bottom-left is kept clear for the profile picture. |
+| `x-banner-A/B/C.png` (`@2x`) | Alternative X headers: A wordmark (dark), B parchment (light), C product ticket (dark). |
 | `og-1200x630.png` (`@2x`) | Link preview image; served as `public/img/og.png`. |
 | `lockup-dark.png`, `lockup-light.png` (`@2x`) | Mark + wordmark for dark and light backgrounds. |
 | `quill-promo.mp4` | 47 s promo, 1920×1080, female voiceover and burned-in captions. |
