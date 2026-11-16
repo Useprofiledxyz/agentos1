@@ -1,7 +1,7 @@
 // Quill app: hash-routed views, live Robinhood Chain data, the agent drawer, and ticket signing in the user's own wallet.
 import {
   ago, api, avatar, checkpointHtml, connectWallet, disconnectWallet, ensureChain, esc, fmtPrice, initTheme,
-  localStorageSet, sendTx, short, signed, state, toast, usd, waitReceipt,
+  sendTx, short, signed, state, toast, usd, waitReceipt,
 } from "./lib.js";
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -15,11 +15,8 @@ async function boot() {
   initTheme($("#themeBtn"));
   const [health, chains, me] = await Promise.all([api("/health"), api("/chains"), api("/auth/me").catch(() => ({}))]);
   state.health = health; state.chains = chains; state.address = me.address || null;
-  if (!chains.some((c) => c.key === state.chain)) state.chain = "robinhood";
-  const sel = $("#chain");
-  sel.innerHTML = chains.map((c) => `<option value="${c.key}">${esc(c.name)}</option>`).join("");
-  sel.value = state.chain;
-  sel.onchange = () => { state.chain = sel.value; localStorageSet("quill.chain", sel.value); route(); };
+  // The website is Robinhood Chain only. (The API still accepts base, arbitrum and ethereum for developers.)
+  state.chain = "robinhood";
   if (health.mock) { const p = $("#modePill"); p.hidden = false; p.textContent = "demo data"; p.title = "QUILL_MOCK=1: quotes and chain reads are simulated"; }
   $("#chatMode").textContent = health.llm ? "AI" : "command mode";
 
@@ -297,7 +294,7 @@ function swap(q) {
     e.preventDefault();
     const out = $("#swapOut");
     out.innerHTML = `<div class="card"><span class="spinner"></span>&nbsp; Running the Checkpoint on the live pool…</div>`;
-    const args = { chain: state.chain, tokenIn: $("#sIn").value.trim(), tokenOut: $("#sOut").value.trim(), amount: $("#sAmt").value.trim(), slippagePct: slip };
+    const args = { chain: "robinhood", tokenIn: $("#sIn").value.trim(), tokenOut: $("#sOut").value.trim(), amount: $("#sAmt").value.trim(), slippagePct: slip };
     try {
       if (!state.address) {
         const g = await api(`/tools/quote_swap?${new URLSearchParams(args)}`);
@@ -330,7 +327,7 @@ function check(q) {
     const out = $("#checkOut"), a = $("#addr").value.trim();
     out.innerHTML = `<div class="card"><span class="spinner"></span>&nbsp; Checking…</div>`;
     try {
-      const r = await api(`/tools/check_token?${new URLSearchParams({ chain: state.chain, address: a })}`);
+      const r = await api(`/tools/check_token?${new URLSearchParams({ chain: "robinhood", address: a })}`);
       out.innerHTML = `<div class="card">
         <div class="panel-head"><div class="token-cell">${avatar(r.swap?.tokenOut?.symbol, a)}<div><b style="font-size:18px">${esc(r.swap?.tokenOut?.symbol || "Token")}</b><small class="mono">${esc(short(a))}</small></div></div>
         ${r.health ? `<span class="mono muted">score <b style="color:var(--text)">${r.health.score}</b>/100</span>` : ""}</div>

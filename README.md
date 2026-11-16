@@ -7,7 +7,7 @@ An AI trading desk for **Robinhood Chain** (chain 4663) with a checkpoint, plus 
 | Area | What runs |
 |---|---|
 | Agent chat | Claude with read tools and `prepare_swap`. Plain-language requests become tickets you review and sign. Without an API key, a command parser handles the common requests. |
-| Swap | Any pair on **Robinhood Chain** (ETH, WETH, USDG, 63 tokenized stocks and ETFs such as NVDA, TSLA, SPY, and any coin by address), and on **Base**, **Arbitrum** and **Ethereum**, through KyberSwap routes. Calldata is built on the server from a fresh route, for the known router only. |
+| Swap | Any pair on **Robinhood Chain** (ETH, WETH, USDG, 63 tokenized stocks and ETFs such as NVDA, TSLA, SPY, and any coin by address), through KyberSwap routes. The website is Robinhood Chain only; the API also accepts `chain=base`, `arbitrum` or `ethereum` for developers. Calldata is built on the server from a fresh route, for the known router only. |
 | Checkpoint | Pre-trade checks on every quote and again right before signing (see below). |
 | Check a token | Paste a contract: bytecode heuristics plus a small test buy and test sell. |
 | Logos | `/api/logo/:address`: coin logos from GeckoTerminal and DexScreener, company logos for tokenized stocks, a generated avatar when none exists. Batched lookups, CDN-cached for a week. |

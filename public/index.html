@@ -140,7 +140,7 @@
       <p class="tag"><i></i>Also in the desk</p>
       <h2 id="also-h" class="big">Everything else, <em>one click in.</em></h2>
       <div class="also-grid">
-        <a class="also-card" href="/app/#/swap"><b>Swap</b><span>Any pair on Robinhood Chain, plus Base, Arbitrum and Ethereum, routed through KyberSwap.</span></a>
+        <a class="also-card" href="/app/#/swap"><b>Swap</b><span>Any pair on Robinhood Chain: coins, USDG and tokenized stocks, routed through KyberSwap.</span></a>
         <a class="also-card" href="/app/#/new"><b>New pairs</b><span>Pools minutes old, refreshed on their own. Check before you touch.</span></a>
         <a class="also-card" href="/app/#/portfolio"><b>Portfolio</b><span>ETH, USDG and every tokenized stock you hold, read from the chain in one call.</span></a>
         <a class="also-card" href="/app/#/limits"><b>Limits</b><span>Per-trade and daily caps, slippage, a pause button. Enforced outside the model.</span></a>
@@ -200,7 +200,7 @@ claude mcp add quill -- node mcp/index.mjs</pre>
         <details><summary>Does Quill hold my funds or keys?</summary><p>No. The server builds unsigned transactions and your wallet signs them. Signing in is a free signature over a one-time message; it cannot move funds.</p></details>
         <details><summary>Can the agent trade without me?</summary><p>No. The agent can only prepare tickets. Each one waits for you to review and sign it in your own wallet, and expires after 10 minutes.</p></details>
         <details><summary>Is the Checkpoint an audit?</summary><p>No. It is a set of live checks and bytecode heuristics. It catches common traps (honeypots, taxes, thin pools, owner powers) but cannot prove a token is safe.</p></details>
-        <details><summary>Which chains and tokens?</summary><p>Robinhood Chain first: ETH, WETH, USDG, 63 tokenized stocks and any coin by address. Base, Arbitrum and Ethereum are there too.</p></details>
+        <details><summary>Which chains and tokens?</summary><p>Robinhood Chain (chain 4663): ETH, WETH, USDG, 63 tokenized stocks and any coin on the chain by its contract address.</p></details>
         <details><summary>Why was my trade blocked?</summary><p>The ticket shows which check failed and why: no route back, a high round-trip loss, a price far from market, or one of your limits. Nothing is built when a check fails.</p></details>
       </div>
     </section>

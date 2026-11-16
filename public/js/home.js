@@ -23,7 +23,7 @@ menu.addEventListener("click", (e) => { if (e.target.closest("a")) setMenu(false
 addEventListener("keydown", (e) => { if (e.key === "Escape") setMenu(false); });
 
 // works-with marquee (names only)
-const works = ["Robinhood Chain", "Uniswap", "Pons", "KyberSwap", "Long", "Bankr", "Virtuals", "GeckoTerminal", "DexScreener", "MetaMask", "Rabby", "Coinbase Wallet", "Claude", "Claude Code", "Cursor", "Base", "Arbitrum", "Ethereum"];
+const works = ["Robinhood Chain", "Uniswap", "Pons", "KyberSwap", "Long", "Bankr", "Virtuals", "GeckoTerminal", "DexScreener", "MetaMask", "Rabby", "Coinbase Wallet", "Claude", "Claude Code", "Cursor", "Blockscout"];
 $("#worksTrack").innerHTML = [...works, ...works].map((w) => `<span>${esc(w)}</span>`).join("");
 
 // reveal
