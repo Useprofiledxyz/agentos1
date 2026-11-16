@@ -10,7 +10,7 @@ export const DEFAULT_POLICY = {
   maxPriceImpactPct: 8,
   maxRoundTripLossPct: 20,
   blockedTokens: [],
-  allowedChains: ["base", "arbitrum", "ethereum"],
+  allowedChains: ["robinhood", "base", "arbitrum", "ethereum"],
   freeMessagesPerDay: 30,
   note: "Operator policy. Edit this file to change limits; it is re-read on every action.",
 };

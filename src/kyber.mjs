@@ -1,4 +1,4 @@
-// KyberSwap aggregator: routes and calldata for Base, Arbitrum and Ethereum.
+// KyberSwap aggregator: routes and calldata for Robinhood Chain, Base, Arbitrum and Ethereum.
 // Calldata is only ever built on the server from a fresh route, and only for the known router.
 import { CHAINS, chainKey, NATIVE } from "./chains.mjs";
 import { MOCK, mockBuild, mockRoute } from "./mock.mjs";

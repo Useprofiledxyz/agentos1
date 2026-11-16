@@ -1,6 +1,6 @@
 // Shared helpers: API calls, wallet (EIP-1193), rendering primitives.
 
-export const state = { address: null, chain: localStorageGet("quill.chain") || "base", chains: [], health: null };
+export const state = { address: null, chain: localStorageGet("quill.chain") || "robinhood", chains: [], health: null };
 
 export function localStorageGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
 export function localStorageSet(k, v) { try { localStorage.setItem(k, v); } catch {} }

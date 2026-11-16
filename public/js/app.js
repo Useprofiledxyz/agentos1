@@ -21,7 +21,7 @@ async function boot() {
 
   const [health, chains, me] = await Promise.all([api("/health"), api("/chains"), api("/auth/me").catch(() => ({}))]);
   state.health = health; state.chains = chains; state.address = me.address || null;
-  if (!chains.some((c) => c.key === state.chain)) state.chain = "base";
+  if (!chains.some((c) => c.key === state.chain)) state.chain = "robinhood";
   const sel = $("#chain");
   sel.innerHTML = chains.map((c) => `<option value="${c.key}">${esc(c.name)}</option>`).join("");
   sel.value = state.chain;
@@ -83,7 +83,7 @@ function desk() {
     <section class="hero">
       <div>
         <h1>Ask in plain words.<br>Sign only what passed.</h1>
-        <p>Quill reads live prices and contracts, runs the <b>Checkpoint</b> on every trade, and writes you a ticket. The agent never holds a key: nothing moves until you sign it in your own wallet.</p>
+        <p>A trading desk for <b>Robinhood Chain</b>: coins, USDG and tokenized stocks, plus Base, Arbitrum and Ethereum. Quill reads live prices and contracts, runs the <b>Checkpoint</b> on every trade, and writes you a ticket. The agent never holds a key: nothing moves until you sign it in your own wallet.</p>
         <div class="row">
           <button class="btn primary" data-ask="">Ask the agent</button>
           <a class="btn ghost" href="#/swap">Open swap</a>
@@ -104,7 +104,7 @@ function desk() {
       <div class="card span-5 stack">
         <h3>Try asking</h3>
         <div class="chips">
-          ${["swap 0.01 ETH to USDC", "price BTC", "movers", "funding", "what are my limits?"].map((t) => `<button class="chip" data-ask="${esc(t)}">${esc(t)}</button>`).join("")}
+          ${["swap 0.01 ETH to USDG", "buy TSLA with 0.01 ETH", "price BTC", "movers", "funding", "what are my limits?"].map((t) => `<button class="chip" data-ask="${esc(t)}">${esc(t)}</button>`).join("")}
         </div>
         <h3 style="margin-top:8px">Your desk</h3>
         <div id="deskMe" class="muted">${state.address ? '<span class="spinner"></span>' : "Connect a wallet to see your limits and journal."}</div>
@@ -122,7 +122,8 @@ function desk() {
 
 function swap(q) {
   const chain = state.chains.find((c) => c.key === state.chain);
-  const known = chain?.tokens || [];
+  const known = [...(chain?.tokens || []), ...(chain?.stocks || []).map((s) => s.symbol)];
+  const defOut = state.chain === "robinhood" ? "USDG" : "USDC";
   view.innerHTML = `
     <h1>Swap <span class="muted" style="font-size:.5em">on ${esc(chainName())}</span></h1>
     <div class="grid">
@@ -130,8 +131,9 @@ function swap(q) {
         <div class="field"><label for="sIn">You pay</label><input id="sIn" list="known" value="${esc(q.get("in") || "ETH")}" required></div>
         <div class="field"><label for="sAmt">Amount</label><input id="sAmt" inputmode="decimal" value="${esc(q.get("amount") || "0.01")}" pattern="[0-9]*[.]?[0-9]+" required></div>
         <button type="button" class="swap-arrow" id="flip" aria-label="Flip tokens">⇅</button>
-        <div class="field"><label for="sOut">You receive</label><input id="sOut" list="known" value="${esc(q.get("out") || "USDC")}" placeholder="symbol or 0x…" required></div>
+        <div class="field"><label for="sOut">You receive</label><input id="sOut" list="known" value="${esc(q.get("out") || defOut)}" placeholder="symbol or 0x…" required></div>
         <datalist id="known">${known.map((t) => `<option value="${esc(t)}">`).join("")}</datalist>
+        ${chain?.stocks?.length ? `<div class="field"><label>Tokenized stocks &amp; ETFs</label><div class="chips">${chain.stocks.slice(0, 12).map((s) => `<button type="button" class="chip" data-stock="${esc(s.symbol)}" title="${esc(s.name)}">${esc(s.symbol)}</button>`).join("")}</div></div>` : ""}
         <div class="field"><label>Slippage</label><div class="seg" id="slip">${[0.5, 1, 3, 5].map((s) => `<button type="button" data-s="${s}" class="${s === 1 ? "on" : ""}">${s}%</button>`).join("")}</div></div>
         <button class="btn primary" type="submit">Check &amp; make ticket</button>
         <p class="muted" style="margin:0;font-size:13px">Routes from KyberSwap. The ticket is re-checked on the live pool right before you sign.</p>
@@ -140,6 +142,7 @@ function swap(q) {
     </div>`;
   let slip = 1;
   $("#slip").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; slip = Number(b.dataset.s); $("#slip").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); };
+  view.querySelectorAll("[data-stock]").forEach((b) => (b.onclick = () => { $("#sIn").value = "ETH"; $("#sOut").value = b.dataset.stock; }));
   $("#flip").onclick = () => { const a = $("#sIn").value; $("#sIn").value = $("#sOut").value; $("#sOut").value = a; };
   $("#swapForm").onsubmit = async (e) => {
     e.preventDefault();
@@ -337,7 +340,7 @@ function openDrawer(prefill) {
   const log = $("#chatLog");
   if (!log.children.length) addMsg("bot", state.health?.llm
     ? "Ask me for prices, a token check or a swap. I prepare tickets; you sign them."
-    : "AI chat is off on this server, so I take commands: swap 0.01 ETH to USDC · check 0x… · price BTC · movers · funding · limits.");
+    : "AI chat is off on this server, so I take commands: swap 0.01 ETH to USDG · buy TSLA with 0.01 ETH · check 0x… · price BTC · movers · funding · limits.");
   if (prefill != null) { $("#chatInput").value = prefill; if (prefill) sendChat(); }
   $("#chatInput").focus();
 }

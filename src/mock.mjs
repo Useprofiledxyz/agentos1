@@ -3,8 +3,8 @@
 export const MOCK = process.env.QUILL_MOCK === "1";
 
 // USD prices for mock quotes, and a pool depth (USD) that sets the simulated price impact.
-const PRICES = { ETH: 3200, WETH: 3200, USDC: 1, USDT: 1, DAI: 1, CBBTC: 95000, WBTC: 95000, ARB: 0.6 };
-const DEPTH = { USDC: 5e7, USDT: 3e7, DAI: 1e7, WETH: 8e7, ETH: 8e7, CBBTC: 2e7, WBTC: 2e7, ARB: 4e6 };
+const PRICES = { ETH: 3200, WETH: 3200, USDC: 1, USDT: 1, DAI: 1, USDG: 1, CBBTC: 95000, WBTC: 95000, ARB: 0.6, NVDA: 180, TSLA: 400, SPY: 600, AAPL: 230 };
+const DEPTH = { USDC: 5e7, USDT: 3e7, DAI: 1e7, USDG: 2e6, WETH: 8e7, ETH: 8e7, CBBTC: 2e7, WBTC: 2e7, ARB: 4e6, NVDA: 3e5, TSLA: 3e5, SPY: 5e5, AAPL: 2e5 };
 // A thin, taxed token at this address lets tests exercise Checkpoint warnings and failures.
 export const MOCK_RISKY = "0x000000000000000000000000000000000000dEaD";
 export const MOCK_ROUTER = "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5";

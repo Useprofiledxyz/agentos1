@@ -2,12 +2,12 @@
 
 # Quill
 
-An AI trading desk with a checkpoint. Ask in plain words; Quill reads live data, runs the **Checkpoint** on the trade, and writes you a ticket. Nothing moves until you sign it in your own wallet. The agent never holds a key.
+An AI trading desk for **Robinhood Chain** (chain 4663) with a checkpoint, plus Base, Arbitrum and Ethereum. Ask in plain words; Quill reads live data, runs the **Checkpoint** on the trade, and writes you a ticket. Nothing moves until you sign it in your own wallet. The agent never holds a key.
 
 | Area | What runs |
 |---|---|
 | Agent chat | Claude with read tools and `prepare_swap`. Plain-language requests become tickets you review and sign. Without an API key, a command parser handles the common requests. |
-| Swap | Any pair on **Base**, **Arbitrum** and **Ethereum** through KyberSwap routes. Calldata is built on the server from a fresh route, for the known router only. |
+| Swap | Any pair on **Robinhood Chain** (ETH, WETH, USDG, 63 tokenized stocks and ETFs such as NVDA, TSLA, SPY, and any coin by address), and on **Base**, **Arbitrum** and **Ethereum**, through KyberSwap routes. Calldata is built on the server from a fresh route, for the known router only. |
 | Checkpoint | Pre-trade checks on every quote and again right before signing (see below). |
 | Check a token | Paste a contract: bytecode heuristics plus a small test buy and test sell. |
 | Perp data | Hyperliquid movers, funding extremes, ticker stats and an order-book fill simulator. Read-only. |
@@ -70,10 +70,11 @@ npm run token -- my-laptop --owner 0xYourWallet --execute
 
 ```
 GET  /api/tools                                       list tools, tiers, JSON schemas
-GET  /api/tools/quote_swap?tokenIn=ETH&tokenOut=USDC&amount=0.01&chain=base
-GET  /api/tools/check_token?address=0x…&chain=base
+GET  /api/tools/quote_swap?tokenIn=ETH&tokenOut=USDG&amount=0.01          # chain defaults to robinhood
+GET  /api/tools/quote_swap?tokenIn=ETH&tokenOut=TSLA&amount=0.01
+GET  /api/tools/check_token?address=0x…&chain=robinhood
 GET  /api/tools/analyze_ticker?coin=BTC
-POST /api/tools/prepare_swap      x-api-key                    {"tokenOut":"USDC","amount":"0.01"}
+POST /api/tools/prepare_swap      x-api-key                    {"tokenOut":"USDG","amount":"0.01"}
 POST /api/tools/execute_intent    x-api-key + Idempotency-Key  {"confirmationId":"cf_…"}
 ```
 
@@ -117,7 +118,7 @@ Covers the Checkpoint on clean and risky tokens, the per-trade cap, wallet sign-
 
 ## Not included
 
-Perp order placement, a custodial agent wallet, a Telegram bot and launch monitoring are not part of this version.
+Direct Pons bonding-curve routes (coins still on a Pons curve are only tradable here if KyberSwap routes them), perp order placement, a custodial agent wallet, a Telegram bot and launch monitoring are not part of this version.
 
 ## License
 

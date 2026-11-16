@@ -14,13 +14,13 @@ import { chainKey } from "./chains.mjs";
 
 const str = (description, extra = {}) => ({ type: "string", description, ...extra });
 const num = (description, extra = {}) => ({ type: "number", description, ...extra });
-const CHAIN = str("Chain: base, arbitrum or ethereum (default base)", { enum: ["base", "arbitrum", "ethereum"] });
+const CHAIN = str("Chain: robinhood (Robinhood Chain 4663, default), base, arbitrum or ethereum", { enum: ["robinhood", "base", "arbitrum", "ethereum"] });
 const obj = (properties, required = []) => ({ type: "object", properties, required, additionalProperties: false });
 
 export const TOOLS = [
   {
     name: "list_chains", tier: "read",
-    description: "Chains Quill supports and the token symbols it knows on each. Any other token can be used by contract address.",
+    description: "Chains Quill supports, the token symbols it knows on each, and the tokenized stocks and ETFs on Robinhood Chain (NVDA, TSLA, SPY…). Any other token can be used by contract address.",
     input_schema: obj({}),
     run: async () => publicChains(),
   },
@@ -40,7 +40,7 @@ export const TOOLS = [
     name: "token_health", tier: "read",
     description: "Bytecode heuristics only for a token contract (no quotes).",
     input_schema: obj({ chain: CHAIN, address: str("Token contract address 0x…") }, ["address"]),
-    run: (a) => tokenHealth(a.chain || "base", a.address),
+    run: (a) => tokenHealth(a.chain, a.address),
   },
   {
     name: "get_balance", tier: "read",
@@ -49,7 +49,7 @@ export const TOOLS = [
     run: async (a, ctx) => {
       const who = a.address || ctx.address;
       if (!who) throw new Error("No address: connect a wallet or pass one");
-      const t = await resolveToken(a.chain || "base", a.token || "ETH");
+      const t = await resolveToken(a.chain, a.token || "ETH");
       const raw = await balanceOf(chainKey(a.chain), t.address, who);
       return { address: who, chain: chainKey(a.chain), token: t.symbol, balance: formatUnits(raw, t.decimals) };
     },

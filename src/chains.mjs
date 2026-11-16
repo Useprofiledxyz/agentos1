@@ -1,9 +1,28 @@
 // Chains Quill can quote and build swaps on, and the tokens it knows by symbol.
 // Any other token is accepted by contract address; its symbol and decimals are read from the chain.
+// Robinhood Chain (4663) is the home chain; Base, Arbitrum and Ethereum are extra networks with the same flow.
+import { readFileSync } from "node:fs";
 
 export const NATIVE = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
 
+const STOCKS = JSON.parse(readFileSync(new URL("./data/robinhood-stocks.json", import.meta.url), "utf8")).stocks;
+
+export const DEFAULT_CHAIN = "robinhood";
+
 export const CHAINS = {
+  robinhood: {
+    id: 4663,
+    name: "Robinhood Chain",
+    kyberSlug: "robinhood",
+    rpc: process.env.ROBINHOOD_RPC || "https://rpc.mainnet.chain.robinhood.com",
+    explorer: "https://robinhoodchain.blockscout.com",
+    tokens: {
+      ETH: { address: NATIVE, decimals: 18 },
+      WETH: { address: "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73", decimals: 18 },
+      USDG: { address: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168", decimals: 6 },
+      ...Object.fromEntries(STOCKS.map((s) => [s.symbol, { address: s.address, decimals: s.decimals, name: s.name, stock: true }])),
+    },
+  },
   base: {
     id: 8453,
     name: "Base",
@@ -55,11 +74,12 @@ const BY_ID = Object.fromEntries(Object.entries(CHAINS).map(([k, c]) => [c.id, k
 
 /** chainKey("base" | 8453 | "8453") → "base" */
 export function chainKey(c) {
-  if (c == null || c === "") return "base";
+  if (c == null || c === "") return DEFAULT_CHAIN;
   const s = String(c).toLowerCase().trim();
   if (CHAINS[s]) return s;
   if (BY_ID[s]) return BY_ID[s];
   if (s === "arb") return "arbitrum";
+  if (s === "rh" || s === "robinhood chain" || s === "hood") return "robinhood";
   if (s === "eth" || s === "mainnet") return "ethereum";
   throw new Error(`Unknown chain "${c}". Supported: ${Object.keys(CHAINS).join(", ")}`);
 }
@@ -71,13 +91,17 @@ export const isNative = (a) => String(a).toLowerCase() === NATIVE.toLowerCase();
 export function knownToken(chain, symbolOrAddress) {
   const c = CHAINS[chainKey(chain)];
   const s = String(symbolOrAddress || "").toUpperCase().trim();
-  if (c.tokens[s]) return { symbol: s, ...c.tokens[s] };
+  if (c.tokens[s]) { const { address, decimals } = c.tokens[s]; return { symbol: s, address, decimals }; }
   if (isAddress(symbolOrAddress)) {
-    for (const [sym, t] of Object.entries(c.tokens)) if (t.address.toLowerCase() === s.toLowerCase()) return { symbol: sym, ...t };
+    for (const [sym, t] of Object.entries(c.tokens)) if (t.address.toLowerCase() === s.toLowerCase()) return { symbol: sym, address: t.address, decimals: t.decimals };
   }
   return null;
 }
 
 export function publicChains() {
-  return Object.entries(CHAINS).map(([key, c]) => ({ key, id: c.id, name: c.name, explorer: c.explorer, tokens: Object.keys(c.tokens) }));
+  return Object.entries(CHAINS).map(([key, c]) => ({
+    key, id: c.id, name: c.name, explorer: c.explorer,
+    tokens: Object.keys(c.tokens).filter((s) => !c.tokens[s].stock),
+    stocks: Object.entries(c.tokens).filter(([, t]) => t.stock).map(([s, t]) => ({ symbol: s, name: t.name, address: t.address })),
+  }));
 }

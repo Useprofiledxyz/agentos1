@@ -5,7 +5,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { build } from "./kyber.mjs";
 import { gateSwap, quoteSwap } from "./gate.mjs";
 import { allowance, encodeApprove } from "./rpc.mjs";
-import { CHAINS, isNative } from "./chains.mjs";
+import { CHAINS, chainKey, isNative } from "./chains.mjs";
 import { journal } from "./journal.mjs";
 import { recordUsage } from "./policy.mjs";
 
@@ -21,7 +21,7 @@ function sweep() { const now = Date.now(); for (const [id, x] of intents) if (x.
 export async function prepareSwap(params, { kind = "ticket", owner = null } = {}) {
   sweep();
   const p = {
-    chain: params.chain || "base",
+    chain: chainKey(params.chain),
     tokenIn: String(params.tokenIn || "ETH"),
     tokenOut: String(params.tokenOut || ""),
     amount: String(params.amount ?? params.amountIn ?? ""),
