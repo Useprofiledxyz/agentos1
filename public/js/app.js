@@ -291,7 +291,6 @@ function swap(q) {
     { symbol: "ETH", name: "Ether", address: chain.tokenAddresses.ETH, group: "Tokens" },
     { symbol: "WETH", name: "Wrapped Ether", address: chain.tokenAddresses.WETH, group: "Tokens" },
     { symbol: "USDG", name: "Global Dollar", address: chain.tokenAddresses.USDG, group: "Tokens" },
-    { symbol: "QUILL", name: "Quill HQ", address: chain.tokenAddresses.QUILL, group: "Tokens" },
   ];
   const stocks = chain.stocks.map((s) => ({ symbol: s.symbol, name: s.name, address: s.address, group: "Stocks", stock: true }));
   let coins = [], prices = {};
