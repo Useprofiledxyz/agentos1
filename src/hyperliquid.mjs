@@ -1,5 +1,5 @@
 // Hyperliquid read tools (public info endpoint): market stats, movers, funding extremes, order-book fill simulation.
-// AgentOS does not place Hyperliquid orders; these tools only read.
+// Quill does not place Hyperliquid orders; these tools only read.
 import { MOCK } from "./mock.mjs";
 
 const INFO = process.env.HL_INFO_URL || "https://api.hyperliquid.xyz/info";

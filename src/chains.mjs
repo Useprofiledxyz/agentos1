@@ -1,4 +1,4 @@
-// Chains AgentOS can quote and build swaps on, and the tokens it knows by symbol.
+// Chains Quill can quote and build swaps on, and the tokens it knows by symbol.
 // Any other token is accepted by contract address; its symbol and decimals are read from the chain.
 
 export const NATIVE = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";

@@ -1,6 +1,6 @@
 // Shared helpers: API calls, wallet (EIP-1193), rendering primitives.
 
-export const state = { address: null, chain: localStorageGet("aos.chain") || "base", chains: [], health: null };
+export const state = { address: null, chain: localStorageGet("quill.chain") || "base", chains: [], health: null };
 
 export function localStorageGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
 export function localStorageSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
@@ -19,7 +19,7 @@ export async function api(path, { method = "GET", body } = {}) {
 
 /** Escape text for innerHTML. Token names and symbols come from the internet: always escape them. */
 export const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-export const short = (a) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "");
+export const short = (a) => (a && /^0x[0-9a-fA-F]{20,}$/.test(a) ? `${a.slice(0, 6)}…${a.slice(-4)}` : a || "");
 export const usd = (n) => (n == null || !isFinite(n) ? "–" : n >= 1e9 ? `$${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(1)}K` : `$${Number(n).toFixed(2)}`);
 export const price = (n) => (n == null ? "–" : n >= 1000 ? n.toLocaleString("en-US", { maximumFractionDigits: 2 }) : n >= 1 ? n.toFixed(3) : n.toPrecision(4));
 export const signed = (n) => (n == null ? "–" : `<span class="${n >= 0 ? "up" : "down"}">${n > 0 ? "+" : ""}${n.toFixed(2)}%</span>`);

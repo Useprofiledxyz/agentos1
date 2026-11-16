@@ -1,13 +1,15 @@
-/* AgentOS — paper & ink. Light by default, dark on request or by system preference. */
+/* Quill — cream paper, teal ink, an orange nib. Light by default, dark on request or by system preference. */
 :root {
-  --paper: #f4f1ea;
-  --card: #fffdf8;
-  --ink: #16161a;
-  --ink-2: #4a4a52;
-  --ink-3: #8a8a92;
-  --line: #dcd6c8;
-  --line-2: #e9e4d8;
-  --accent: #ff5a1f;
+  --paper: #fdf6e9;
+  --card: #fffcf6;
+  --ink: #10302c;
+  --ink-2: #3f5653;
+  --ink-3: #7e8f8c;
+  --line: #e3d9c6;
+  --line-2: #f0e8d8;
+  --accent: #f97316;
+  --teal: #0f766e;
+  --teal-ink: #ffffff;
   --accent-ink: #ffffff;
   --pass: #1f8a5b;
   --pass-bg: #e3f3ea;
@@ -26,15 +28,15 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #121214; --card: #1b1b1f; --ink: #f1ede4; --ink-2: #b9b5ac; --ink-3: #7d7a74;
-    --line: #2e2d31; --line-2: #242327; --pass: #4cc38a; --pass-bg: #163626; --warn: #f0b04a; --warn-bg: #3a2b10;
-    --fail: #ff7a6b; --fail-bg: #3d1a16; --info: #8fb0ff; --info-bg: #1b2440; color-scheme: dark;
+    --paper: #0c1716; --card: #12211f; --ink: #eef5f1; --ink-2: #b9b5ac; --ink-3: #7d7a74;
+    --line: #23403c; --line-2: #1a302d; --pass: #4cc38a; --pass-bg: #163626; --warn: #f0b04a; --warn-bg: #3a2b10;
+    --fail: #ff7a6b; --fail-bg: #3d1a16; --info: #8fb0ff; --info-bg: #1b2440; --teal: #2dd4bf; --teal-ink: #062925; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --paper: #121214; --card: #1b1b1f; --ink: #f1ede4; --ink-2: #b9b5ac; --ink-3: #7d7a74;
-  --line: #2e2d31; --line-2: #242327; --pass: #4cc38a; --pass-bg: #163626; --warn: #f0b04a; --warn-bg: #3a2b10;
-  --fail: #ff7a6b; --fail-bg: #3d1a16; --info: #8fb0ff; --info-bg: #1b2440; color-scheme: dark;
+  --paper: #0c1716; --card: #12211f; --ink: #eef5f1; --ink-2: #b9b5ac; --ink-3: #7d7a74;
+  --line: #23403c; --line-2: #1a302d; --pass: #4cc38a; --pass-bg: #163626; --warn: #f0b04a; --warn-bg: #3a2b10;
+  --fail: #ff7a6b; --fail-bg: #3d1a16; --info: #8fb0ff; --info-bg: #1b2440; --teal: #2dd4bf; --teal-ink: #062925; color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -65,7 +67,7 @@ h3 { font-size: 15px; text-transform: uppercase; letter-spacing: .08em; color: v
   backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
 }
 .brand { display: flex; align-items: center; gap: 8px; text-decoration: none; font-weight: 500; font-size: 18px; width: calc(var(--rail) - 16px); }
-.brand b { color: var(--accent); }
+.brand span { font-weight: 700; letter-spacing: -.02em; }
 .topbar-mid { flex: 1; display: flex; gap: 10px; align-items: center; min-width: 0; }
 .topbar-end { display: flex; gap: 8px; align-items: center; }
 .chain-pick select, input, select, textarea {
@@ -84,7 +86,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px s
   border: 1px solid var(--ink); background: var(--card); color: var(--ink); white-space: nowrap;
 }
 .btn:hover { background: var(--line-2); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary { background: var(--teal); border-color: var(--teal); color: var(--teal-ink); }
 .btn.primary:hover { filter: brightness(.95); }
 .btn.ghost { border-color: var(--line); }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
@@ -99,13 +101,14 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px s
 .rail a { display: flex; gap: 10px; align-items: center; text-decoration: none; padding: 9px 10px; border-radius: 8px; color: var(--ink-2); }
 .rail a i { font-style: normal; width: 22px; text-align: center; font-family: var(--mono); }
 .rail a:hover { background: var(--line-2); color: var(--ink); }
-.rail a.on { background: var(--ink); color: var(--paper); }
+.rail a.on { background: var(--teal); color: var(--teal-ink); }
 
 main { margin: var(--top) 0 0 var(--rail); padding: 28px clamp(16px, 3vw, 40px) 80px; max-width: 1180px; outline: none; }
 
 /* cards & grid */
 .grid { display: grid; gap: 16px; grid-template-columns: repeat(12, 1fr); }
 .span-12 { grid-column: span 12; } .span-8 { grid-column: span 8; } .span-7 { grid-column: span 7; } .span-6 { grid-column: span 6; } .span-5 { grid-column: span 5; } .span-4 { grid-column: span 4; }
+.card li, .card td, .card p { overflow-wrap: anywhere; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; box-shadow: var(--shadow); min-width: 0; }
 .card.flat { box-shadow: none; }
 .hero { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; align-items: center; margin-bottom: 24px; }
@@ -196,7 +199,13 @@ pre.code { background: var(--ink); color: var(--paper); padding: 12px 14px; bord
   .rail a span { white-space: nowrap; }
   main { margin-left: 0; padding: 20px 16px 90px; }
   .brand { width: auto; }
-  .brand span, .ask kbd, .chain-pick { display: none; }
+  .brand span, .ask kbd, .mode-pill { display: none !important; }
+  .topbar { gap: 8px; padding: 0 10px; }
+  .chain-pick select { padding: 7px 6px; max-width: 100px; }
+  .topbar-mid { flex: 1; justify-content: flex-start; }
+  .ask { flex: none; width: 40px; height: 38px; padding: 0; font-size: 0; justify-content: center; align-items: center; border-style: solid; }
+  .ask::before { content: "✎"; font-size: 17px; color: var(--teal); }
+  #walletBtn { padding: 8px 10px; }
   .hero { grid-template-columns: 1fr; }
   .grid > * { grid-column: span 12 !important; }
   .checks li { grid-template-columns: 50px 1fr; }

@@ -6,7 +6,7 @@ const hash = (t) => createHash("sha256").update(t).digest("hex");
 
 /** createToken({ label, owner, scopes }) → the plain token, shown once. */
 export async function createToken({ label = "token", owner = null, scopes = ["prepare"] } = {}) {
-  const token = "aos_" + randomBytes(24).toString("base64url");
+  const token = "quill_" + randomBytes(24).toString("base64url");
   const id = "t_" + randomBytes(6).toString("hex");
   await update("apitokens.json", [], (rows) => {
     rows.push({ id, label, owner: owner ? owner.toLowerCase() : null, scopes, dryRun: true, hash: hash(token), createdAt: new Date().toISOString() });
@@ -15,7 +15,7 @@ export async function createToken({ label = "token", owner = null, scopes = ["pr
 }
 
 export async function findToken(token) {
-  if (!token || !String(token).startsWith("aos_")) return null;
+  if (!token || !String(token).startsWith("quill_")) return null;
   const h = Buffer.from(hash(String(token)), "hex");
   const rows = await readJson("apitokens.json", []);
   return rows.find((r) => { const b = Buffer.from(r.hash, "hex"); return b.length === h.length && timingSafeEqual(b, h); }) || null;

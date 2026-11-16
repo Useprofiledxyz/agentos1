@@ -1,4 +1,4 @@
-// AgentOS: static app + JSON API on one port.
+// Quill: static app + JSON API on one port.
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
@@ -7,7 +7,7 @@ import { chat, llmOn } from "./src/agent.mjs";
 import { findToken } from "./src/apitokens.mjs";
 import { clearCookie, logout, newNonce, sessionAddress, sessionCookie, verifyLogin } from "./src/auth.mjs";
 import { publicChains } from "./src/chains.mjs";
-import { buildTicket, getIntent, markSent } from "./src/intents.mjs";
+import { buildTicket, getIntent, markSent, prepareSwap } from "./src/intents.mjs";
 import { readJournal } from "./src/journal.mjs";
 import { MOCK } from "./src/mock.mjs";
 import { getPolicy, setUserLimits } from "./src/policy.mjs";
@@ -90,6 +90,12 @@ async function api(req, res, url) {
     return send(res, 200, await chat({ sessionId: b.sessionId, message: b.message, address: wallet, ip: clientIp(req) }));
   }
 
+  if (p === "/swap/prepare" && req.method === "POST") {
+    if (!wallet) return send(res, 401, { error: "Sign in with your wallet to make a ticket" });
+    const b = await body(req);
+    return send(res, 200, await prepareSwap({ chain: b.chain, tokenIn: b.tokenIn, tokenOut: b.tokenOut, amount: b.amount, slippagePct: b.slippagePct, sender: wallet }, { kind: "ticket", owner: wallet }));
+  }
+
   const t = p.match(/^\/tickets\/([A-Za-z0-9_-]+)(\/build|\/sent)?$/);
   if (t) {
     if (!t[2] && req.method === "GET") { const x = getIntent(t[1]); return x ? send(res, 200, x) : send(res, 404, { error: "Unknown or expired ticket" }); }
@@ -142,5 +148,5 @@ export const server = createServer(async (req, res) => {
 });
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  server.listen(PORT, HOST, () => console.log(`AgentOS on http://${HOST}:${PORT}  (AI chat: ${llmOn() ? "on" : "off, parser mode"}${MOCK ? ", MOCK data" : ""})`));
+  server.listen(PORT, HOST, () => console.log(`Quill on http://${HOST}:${PORT}  (AI chat: ${llmOn() ? "on" : "off, parser mode"}${MOCK ? ", MOCK data" : ""})`));
 }

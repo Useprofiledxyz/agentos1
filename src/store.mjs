@@ -2,7 +2,7 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const DIR = process.env.AGENTOS_DATA || path.resolve("data");
+const DIR = process.env.QUILL_DATA || path.resolve("data");
 const locks = new Map();
 
 export async function readJson(name, fallback) {

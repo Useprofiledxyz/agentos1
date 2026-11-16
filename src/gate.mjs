@@ -1,4 +1,4 @@
-// AgentOS Checkpoint: pre-trade checks on every swap quote. A failed check blocks the action; a warning shows on the ticket.
+// Quill Checkpoint: pre-trade checks on every swap quote. A failed check blocks the action; a warning shows on the ticket.
 // Checks run against live routes and the live chain; thresholds come from the operator policy.
 import { CHAINS, chainKey, isNative } from "./chains.mjs";
 import { tokenHealth } from "./health.mjs";

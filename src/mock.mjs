@@ -1,11 +1,11 @@
-// AGENTOS_MOCK=1: deterministic stand-ins for the chain RPC and the KyberSwap API, so the whole app
-// (chat → ticket → Gate → build) runs offline and in tests. Never use for real trades.
-export const MOCK = process.env.AGENTOS_MOCK === "1";
+// QUILL_MOCK=1: deterministic stand-ins for the chain RPC and the KyberSwap API, so the whole app
+// (chat → ticket → Checkpoint → build) runs offline and in tests. Never use for real trades.
+export const MOCK = process.env.QUILL_MOCK === "1";
 
 // USD prices for mock quotes, and a pool depth (USD) that sets the simulated price impact.
 const PRICES = { ETH: 3200, WETH: 3200, USDC: 1, USDT: 1, DAI: 1, CBBTC: 95000, WBTC: 95000, ARB: 0.6 };
 const DEPTH = { USDC: 5e7, USDT: 3e7, DAI: 1e7, WETH: 8e7, ETH: 8e7, CBBTC: 2e7, WBTC: 2e7, ARB: 4e6 };
-// A thin, taxed token at this address lets tests exercise Gate warnings and failures.
+// A thin, taxed token at this address lets tests exercise Checkpoint warnings and failures.
 export const MOCK_RISKY = "0x000000000000000000000000000000000000dEaD";
 export const MOCK_ROUTER = "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5";
 

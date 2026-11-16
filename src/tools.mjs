@@ -20,13 +20,13 @@ const obj = (properties, required = []) => ({ type: "object", properties, requir
 export const TOOLS = [
   {
     name: "list_chains", tier: "read",
-    description: "Chains AgentOS supports and the token symbols it knows on each. Any other token can be used by contract address.",
+    description: "Chains Quill supports and the token symbols it knows on each. Any other token can be used by contract address.",
     input_schema: obj({}),
     run: async () => publicChains(),
   },
   {
     name: "quote_swap", tier: "read",
-    description: "Quote a swap through KyberSwap and run the AgentOS Checkpoint on it (route, price impact, value kept, test sell, contract heuristics, gas, limits). tokenIn/tokenOut: a known symbol or a contract address. amount is in tokenIn units, e.g. \"0.05\".",
+    description: "Quote a swap through KyberSwap and run the Quill Checkpoint on it (route, price impact, value kept, test sell, contract heuristics, gas, limits). tokenIn/tokenOut: a known symbol or a contract address. amount is in tokenIn units, e.g. \"0.05\".",
     input_schema: obj({ chain: CHAIN, tokenIn: str("Token to sell (symbol or address)"), tokenOut: str("Token to buy (symbol or address)"), amount: str("Amount of tokenIn, decimal string"), slippagePct: num("Slippage tolerance in percent (default 1, max 5)") }, ["tokenOut", "amount"]),
     run: (a, ctx) => gateSwap({ ...a, sender: ctx.address || undefined }),
   },
@@ -74,7 +74,7 @@ export const TOOLS = [
   },
   {
     name: "simulate_perp_fill", tier: "read",
-    description: "Walk the live Hyperliquid order book to estimate fill price and slippage for a perp order of sizeUsd. Read-only: AgentOS does not place perp orders.",
+    description: "Walk the live Hyperliquid order book to estimate fill price and slippage for a perp order of sizeUsd. Read-only: Quill does not place perp orders.",
     input_schema: obj({ coin: str("Perp ticker"), side: str("long or short", { enum: ["long", "short"] }), sizeUsd: num("Notional in USD") }, ["coin", "sizeUsd"]),
     run: (a) => simulateTrade(a),
   },
@@ -98,7 +98,7 @@ export const TOOLS = [
   },
   {
     name: "execute_intent", tier: "execute",
-    description: "Execute a prepared confirmationId. Re-quotes and re-runs the Checkpoint and limits. Dry-run unless the API token has dry-run switched off; live execution returns unsigned transactions for your wallet, since AgentOS holds no keys.",
+    description: "Execute a prepared confirmationId. Re-quotes and re-runs the Checkpoint and limits. Dry-run unless the API token has dry-run switched off; live execution returns unsigned transactions for your wallet, since Quill holds no keys.",
     input_schema: obj({ confirmationId: str("cf_… id from prepare_swap"), sender: str("Wallet that will sign (live mode)") }, ["confirmationId"]),
     run: (a, ctx) => executeIntent(a.confirmationId, { dryRun: ctx.dryRun !== false, owner: ctx.owner, sender: a.sender }),
   },

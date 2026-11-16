@@ -4,12 +4,12 @@ import { CHAINS, chainKey, NATIVE } from "./chains.mjs";
 import { MOCK, mockBuild, mockRoute } from "./mock.mjs";
 
 const BASE = "https://aggregator-api.kyberswap.com";
-const CLIENT = process.env.KYBER_CLIENT_ID || "agentos";
+const CLIENT = process.env.KYBER_CLIENT_ID || "quill";
 const ROUTERS = new Set(
   String(process.env.KYBER_ROUTERS || "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean),
 );
 
-// Kyber refuses bursts, and one Gate run makes several calls: send one at a time with a short gap, back off on 403/429.
+// Kyber refuses bursts, and one Checkpoint run makes several calls: send one at a time with a short gap, back off on 403/429.
 const GAP_MS = Math.max(100, Number(process.env.KYBER_GAP_MS) || 400);
 let queue = Promise.resolve(), last = 0;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

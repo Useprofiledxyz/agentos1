@@ -24,7 +24,7 @@ const hasSelector = (code, s) => code.includes("63" + s);
 export async function tokenHealth(chain, address) {
   const key = chainKey(chain);
   const known = knownToken(key, address);
-  if (known) return { address, known: true, flags: [], score: 100, summary: `${known.symbol} is on the AgentOS known-token list for ${CHAINS[key].name}.` };
+  if (known) return { address, known: true, flags: [], score: 100, summary: `${known.symbol} is on the Quill known-token list for ${CHAINS[key].name}.` };
 
   const code = String(await rpc(key, "eth_getCode", [address, "latest"])).toLowerCase().replace(/^0x/, "");
   if (!code) return { address, known: false, flags: [{ id: "no_code", severity: "fail", text: "No contract code at this address." }], score: 0, summary: "Not a contract." };

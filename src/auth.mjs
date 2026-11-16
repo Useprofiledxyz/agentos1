@@ -6,11 +6,11 @@ import { randomBytes } from "node:crypto";
 
 const NONCE_MS = 5 * 60_000, SESSION_MS = 7 * 24 * 3600_000;
 const nonces = new Map(), sessions = new Map();
-const COOKIE = "aos_session";
+const COOKIE = "quill_session";
 const SECURE = process.env.COOKIE_SECURE === "1";
 
 export function loginMessage(address, nonce, host) {
-  return `${host || "AgentOS"} wants you to sign in with your wallet.\n\nAddress: ${address}\nNonce: ${nonce}\n\nSigning this proves you own the address. It costs nothing and cannot move funds.`;
+  return `${host || "Quill"} wants you to sign in with your wallet.\n\nAddress: ${address}\nNonce: ${nonce}\n\nSigning this proves you own the address. It costs nothing and cannot move funds.`;
 }
 
 export function newNonce(address, host) {

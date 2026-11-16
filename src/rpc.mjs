@@ -1,4 +1,4 @@
-// Minimal JSON-RPC client plus the few ERC-20 reads AgentOS needs. No ethers/viem: calls are hand-encoded.
+// Minimal JSON-RPC client plus the few ERC-20 reads Quill needs. No ethers/viem: calls are hand-encoded.
 import { CHAINS, chainKey, isAddress, isNative, knownToken, NATIVE } from "./chains.mjs";
 import { MOCK, mockRpc } from "./mock.mjs";
 

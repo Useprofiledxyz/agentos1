@@ -67,7 +67,7 @@ export async function recordUsage(address, usd) {
   });
 }
 
-/** checkPolicy({ address, chain, tokens, usd, slippagePct }) → Gate-style check rows. */
+/** checkPolicy({ address, chain, tokens, usd, slippagePct }) → Checkpoint-style check rows. */
 export async function checkPolicy({ address, chain, tokens = [], usd, slippagePct }) {
   const p = await getPolicy(address);
   const rows = [];

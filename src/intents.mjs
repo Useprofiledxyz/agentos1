@@ -1,6 +1,6 @@
 // Prepared actions. A chat ticket lives 10 minutes; an API confirmationId lives 120 seconds and is bound to a hash
 // of its exact parameters. Both are single use. Executing never trusts what was prepared: it re-quotes, re-runs the
-// Gate and the policy, and builds calldata from that fresh route.
+// Checkpoint and the policy, and builds calldata from that fresh route.
 import { createHash, randomBytes } from "node:crypto";
 import { build } from "./kyber.mjs";
 import { gateSwap, quoteSwap } from "./gate.mjs";
@@ -17,7 +17,7 @@ const hashParams = (p) => createHash("sha256").update(canonical(p)).digest("hex"
 
 function sweep() { const now = Date.now(); for (const [id, x] of intents) if (x.expiresAt < now - 60_000) intents.delete(id); }
 
-/** prepareSwap(params, { kind: "ticket" | "confirmation", owner }) → Gate result plus id, or a refusal. */
+/** prepareSwap(params, { kind: "ticket" | "confirmation", owner }) → Checkpoint result plus id, or a refusal. */
 export async function prepareSwap(params, { kind = "ticket", owner = null } = {}) {
   sweep();
   const p = {
@@ -32,7 +32,7 @@ export async function prepareSwap(params, { kind = "ticket", owner = null } = {}
   const gate = await gateSwap(p);
   if (gate.status === "fail") {
     await journal({ owner: owner || p.sender, kind: "swap", stage: "prepare", outcome: "blocked", reason: gate.checks.filter((c) => c.status === "fail").map((c) => c.label).join(", "), params: p });
-    return { ok: false, reason: "Blocked by the AgentOS Checkpoint", gate };
+    return { ok: false, reason: "Blocked by the Quill Checkpoint", gate };
   }
   const id = (kind === "ticket" ? "tk_" : "cf_") + randomBytes(9).toString("base64url");
   const ttl = kind === "ticket" ? TICKET_MS : CONFIRM_MS;
@@ -83,7 +83,7 @@ export async function buildTicket(id, sender) {
   return { ok: true, chainId: CHAINS[q.chain].id, explorer: CHAINS[q.chain].explorer, minOutRaw: swap.minOut.toString(), txs, gate };
 }
 
-/** executeIntent(id, { dryRun, owner }) — API/MCP path. AgentOS holds no keys, so live execution returns unsigned txs. */
+/** executeIntent(id, { dryRun, owner }) — API/MCP path. Quill holds no keys, so live execution returns unsigned txs. */
 export async function executeIntent(id, { dryRun = true, owner, sender } = {}) {
   const x = take(id, { owner });
   if (dryRun) {
