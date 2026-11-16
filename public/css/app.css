@@ -164,3 +164,17 @@ main { margin: var(--top) 0 0 var(--side); padding: 32px clamp(18px, 3vw, 44px) 
   .hide-sm { display: none; }
   #walletBtn { padding: 9px 12px; }
 }
+
+/* wallet gate */
+.gate { min-height: calc(100vh - var(--top) - 120px); display: grid; place-items: center; }
+.gate-card { max-width: 560px; width: 100%; text-align: center; padding: 44px 36px; display: flex; flex-direction: column; align-items: center; gap: 16px; overflow: hidden; }
+.gate-card::before { content: ""; position: absolute; inset: -40% -20% auto; height: 70%; background: radial-gradient(closest-side, var(--teal-glow), transparent); pointer-events: none; }
+.gate-card img { border-radius: 14px; position: relative; }
+.gate-card h1 { font-size: clamp(28px, 3.4vw, 40px); font-weight: 500; letter-spacing: -0.03em; line-height: 1.08; }
+.gate-card h1 em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--teal); }
+.gate-card > p { color: var(--text-2); margin: 0; max-width: 44ch; }
+.gate-list { list-style: none; margin: 12px 0 0; padding: 16px 0 0; border-top: 1px solid var(--line); width: 100%; text-align: left; display: grid; gap: 9px; color: var(--text-2); font-size: 14px; }
+.gate-list li::before { content: "✓"; color: var(--teal); margin-right: 10px; font-weight: 700; }
+/* lock marks on menus that need a wallet */
+body.locked .nav a:not([data-route="desk"])::after { content: ""; width: 12px; height: 12px; margin-left: auto; opacity: 0.55; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V8a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V8a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E") center / contain no-repeat; }
+body.locked .nav a .badge { display: none; }

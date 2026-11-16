@@ -58,6 +58,7 @@ function renderWallet() {
   b.textContent = state.address ? short(state.address) : "Connect wallet";
   b.classList.toggle("primary", !state.address);
   b.title = state.address ? "Signed in. Click to sign out." : "Connect and sign in with your wallet";
+  document.body.classList.toggle("locked", !state.address);
 }
 
 async function onWallet() {
@@ -70,6 +71,36 @@ async function onWallet() {
 
 // ---------------- routing ----------------
 
+// Only the Desk is open without a wallet; every other menu (and the agent) asks you to connect first.
+const OPEN_ROUTES = new Set(["desk"]);
+const ROUTE_NAMES = { swap: "Swap", check: "Checkpoint", live: "Onchain live", new: "New pairs", stocks: "Stocks", token: "Token", portfolio: "Portfolio", limits: "Limits", journal: "Journal", api: "API & MCP", ask: "The agent" };
+
+function gate(r) {
+  const hasWallet = !!window.ethereum;
+  const mobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+  const dappUrl = location.host + location.pathname + location.hash;
+  view.innerHTML = `
+    <section class="gate">
+      <div class="gate-card card">
+        <img src="/img/quill.svg" alt="" width="56" height="56">
+        <span class="eyebrow">${esc(ROUTE_NAMES[r] || "Quill")} is locked</span>
+        <h1>Connect your wallet<br><em>to open the desk.</em></h1>
+        <p>Signing in is a free signature over a one-time message. It cannot move funds, and Quill never sees your keys.</p>
+        <button class="btn primary" id="gateConnect" type="button" style="padding:14px 22px">${hasWallet ? "Connect wallet" : "Connect wallet"}</button>
+        ${!hasWallet ? `<p class="muted" style="font-size:13.5px;margin:4px 0 0">No browser wallet found. ${mobile
+          ? `Open Quill in your wallet app: <a href="https://metamask.app.link/dapp/${esc(dappUrl)}" style="text-decoration:underline">MetaMask</a> · <a href="https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(location.href)}" style="text-decoration:underline">Coinbase Wallet</a>`
+          : `Install <a href="https://metamask.io/download/" target="_blank" rel="noopener" style="text-decoration:underline">MetaMask</a> or <a href="https://rabby.io" target="_blank" rel="noopener" style="text-decoration:underline">Rabby</a>, then come back.`}</p>` : ""}
+        <ul class="gate-list">
+          <li>Swap coins, USDG and tokenized stocks on Robinhood Chain</li>
+          <li>Run the Checkpoint on any token</li>
+          <li>Onchain live, new pairs, stocks and your portfolio</li>
+          <li>Ask the agent; it writes tickets you sign</li>
+        </ul>
+      </div>
+    </section>`;
+  $("#gateConnect").onclick = onWallet;
+}
+
 const ROUTES = { desk, swap, check, live, new: newPairs, stocks: stocksView, token: tokenView, portfolio, limits, journal, api: apiDocs };
 
 function route() {
@@ -78,7 +109,8 @@ function route() {
   const [name, query = ""] = location.hash.replace(/^#\/?/, "").split("?");
   const r = ROUTES[name] ? name : "desk";
   document.querySelectorAll(".nav a").forEach((a) => a.classList.toggle("on", a.dataset.route === r || (r === "token" && a.dataset.route === "live")));
-  ROUTES[r](new URLSearchParams(query));
+  if (!state.address && !OPEN_ROUTES.has(r)) gate(r);
+  else ROUTES[r](new URLSearchParams(query));
   view.focus({ preventScroll: true });
   window.scrollTo(0, 0);
 }
@@ -433,6 +465,7 @@ async function signTicket(t, render) {
 let sessionId = null;
 
 function openDrawer(prefill) {
+  if (!state.address) { document.querySelectorAll(".nav a").forEach((x) => x.classList.remove("on")); gate("ask"); window.scrollTo(0, 0); return; }
   $("#drawer").classList.add("open"); $("#drawer").setAttribute("aria-hidden", "false"); $("#scrim").hidden = false;
   const log = $("#chatLog");
   if (!log.children.length) addMsg("bot", state.health?.llm
