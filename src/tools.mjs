@@ -11,6 +11,7 @@ import { getPolicy } from "./policy.mjs";
 import { balanceOf, resolveToken } from "./rpc.mjs";
 import { formatUnits } from "./units.mjs";
 import { chainKey } from "./chains.mjs";
+import { chainStatus, pools, portfolio, stocks, token } from "./onchain.mjs";
 
 const str = (description, extra = {}) => ({ type: "string", description, ...extra });
 const num = (description, extra = {}) => ({ type: "number", description, ...extra });
@@ -53,6 +54,36 @@ export const TOOLS = [
       const raw = await balanceOf(chainKey(a.chain), t.address, who);
       return { address: who, chain: chainKey(a.chain), token: t.symbol, balance: formatUnits(raw, t.decimals) };
     },
+  },
+  {
+    name: "onchain_pools", tier: "read",
+    description: "Live Robinhood Chain pools from GeckoTerminal: kind 'trending', 'top' (24h volume) or 'new' (newest pairs). Each row: token, venue, price, 5m/1h/24h change, volume, liquidity, FDV, buys/sells, age.",
+    input_schema: obj({ kind: str("trending, top or new", { enum: ["trending", "top", "new"] }), limit: num("How many, default 20") }),
+    run: (a) => pools(a),
+  },
+  {
+    name: "onchain_token", tier: "read",
+    description: "Live market data for one Robinhood Chain token by address: price, change, volume, liquidity, FDV and its pools.",
+    input_schema: obj({ address: str("Token contract address 0x…") }, ["address"]),
+    run: (a) => token(a),
+  },
+  {
+    name: "stock_prices", tier: "read",
+    description: "Every tokenized stock and ETF on Robinhood Chain (NVDA, TSLA, SPY…) with its on-chain price, 24h change and volume.",
+    input_schema: obj({}),
+    run: () => stocks(),
+  },
+  {
+    name: "chain_status", tier: "read",
+    description: "Latest Robinhood Chain block: number, age, base fee and transaction count.",
+    input_schema: obj({}),
+    run: () => chainStatus(),
+  },
+  {
+    name: "get_portfolio", tier: "read",
+    description: "Holdings on Robinhood Chain for an address (defaults to the connected wallet): ETH, WETH, USDG and tokenized stocks with USD value.",
+    input_schema: obj({ address: str("Wallet address; defaults to the connected wallet") }),
+    run: (a, ctx) => portfolio({ address: a.address || ctx.address }),
   },
   {
     name: "analyze_ticker", tier: "read",

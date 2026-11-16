@@ -140,7 +140,26 @@ export async function parseAndRun(text, ctx, onResult = () => {}) {
     const r = await call("check_token", { chain, address: addr[0] });
     return `Checkpoint for ${addr[0]} on ${chain}: ${r.status.toUpperCase()}. ${r.health?.summary || ""}\n` + r.checks.map((c) => `• ${c.label}: ${c.status} — ${c.detail}`).join("\n");
   }
-  if (/\b(movers|gainers|top)\b/i.test(t)) {
+  const fmt = (n) => (n == null ? "–" : n >= 1 ? `$${n.toFixed(n >= 100 ? 2 : 4)}` : `$${n.toPrecision(3)}`);
+  const ch = (n) => (n == null ? "–" : `${n > 0 ? "+" : ""}${n.toFixed(1)}%`);
+  const kind = /\b(new|baru|fresh|launch)/i.test(t) && /\b(pair|pairs|pool|pools|coin|coins|token|launch|launches)\b/i.test(t) ? "new"
+    : /\b(trending|hot|rame|ramai|naik)\b/i.test(t) ? "trending" : /\btop\b.*\b(volume|vol)\b/i.test(t) ? "top" : null;
+  if (kind) {
+    const r = await call("onchain_pools", { kind, limit: 8 });
+    const title = { new: "Newest pairs", trending: "Trending", top: "Top 24h volume" }[kind];
+    return `${title} on Robinhood Chain:\n` + r.pools.map((p) => `• ${p.token.symbol} (${p.dex}) ${fmt(p.priceUsd)}, 24h ${ch(p.change.h24)}, vol $${Math.round(p.volume24hUsd || 0).toLocaleString("en-US")}`).join("\n") + "\nSay \"check <address>\" or \"buy <symbol or address> with 0.01 ETH\".";
+  }
+  if (/\b(stocks?|saham)\b/i.test(t)) {
+    const r = await call("stock_prices", {});
+    const top = r.stocks.filter((s) => s.priceUsd != null).sort((a, b) => (b.volume24hUsd || 0) - (a.volume24hUsd || 0)).slice(0, 10);
+    return "Tokenized stocks on Robinhood Chain (by 24h volume):\n" + top.map((s) => `• ${s.symbol} ${fmt(s.priceUsd)} (${ch(s.change24hPct)})`).join("\n");
+  }
+  if (/\b(portfolio|balance|saldo|holdings)\b/i.test(t)) {
+    if (!ctx.address) return "Connect your wallet first, then ask again.";
+    const p = await call("get_portfolio", {});
+    return p.holdings.length ? `Your Robinhood Chain holdings ($${p.totalUsd}):\n` + p.holdings.map((h) => `• ${h.amount} ${h.symbol}${h.valueUsd != null ? ` ≈ $${h.valueUsd}` : ""}`).join("\n") : "No ETH, USDG or tokenized stocks found in your wallet on Robinhood Chain.";
+  }
+  if (/\b(movers|gainers)\b/i.test(t)) {
     const r = await call("get_movers", { limit: 8 });
     return "Biggest 24h movers on Hyperliquid:\n" + r.map((m) => `• ${m.coin} ${m.change24hPct > 0 ? "+" : ""}${m.change24hPct}% at $${m.markPx}`).join("\n");
   }
@@ -163,6 +182,6 @@ export async function parseAndRun(text, ctx, onResult = () => {}) {
     "• swap 0.05 ETH to USDC on base",
     "• buy 0x… with 0.01 ETH",
     "• check 0x… (or paste an address)",
-    "• price BTC · movers · funding · limits",
+    "• trending · new pairs · top volume · stocks · portfolio · limits",
   ].join("\n");
 }

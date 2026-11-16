@@ -10,7 +10,7 @@ An AI trading desk for **Robinhood Chain** (chain 4663) with a checkpoint, plus 
 | Swap | Any pair on **Robinhood Chain** (ETH, WETH, USDG, 63 tokenized stocks and ETFs such as NVDA, TSLA, SPY, and any coin by address), and on **Base**, **Arbitrum** and **Ethereum**, through KyberSwap routes. Calldata is built on the server from a fresh route, for the known router only. |
 | Checkpoint | Pre-trade checks on every quote and again right before signing (see below). |
 | Check a token | Paste a contract: bytecode heuristics plus a small test buy and test sell. |
-| Perp data | Hyperliquid movers, funding extremes, ticker stats and an order-book fill simulator. Read-only. |
+| Onchain live | Robinhood Chain pools from GeckoTerminal (trending, top volume, new pairs), token pages, tokenized stock prices, the latest block and wallet portfolios, refreshed live. Public market responses are CDN-cached. |
 | Limits | Operator ceiling in `data/policy.json`; each wallet can only tighten its own caps or pause. |
 | Journal | Every prepare, block, build and sent transaction, with its reason. |
 | API and MCP | The same tools over REST and an MCP server (`mcp/`) for Claude Code, Claude Desktop or Cursor. Execution is dry-run by default. |
@@ -26,8 +26,8 @@ An AI trading desk for **Robinhood Chain** (chain 4663) with a checkpoint, plus 
 | Check | Pass | Warn | Fail |
 |---|---|---|---|
 | Route | a KyberSwap route via the known router | | no route |
-| Price impact | under half the limit | under the limit (default 8%) | over the limit |
-| Value kept | up to 3% lost in USD | up to 10% | over 10% |
+| Price impact + fees | one-way cost (half the test-sell round trip) up to 3% | up to the limit (default 8%) | over the limit |
+| Vs market price | shown for reference | over 15% below reference USD prices | |
 | Test sell | round trip loses up to 6% | over 6% | over 20%, or no route back |
 | Contract | known token, or no risky functions | mint, blacklist, fee setters, proxy, live owner | no contract code |
 | Gas | up to 20% of the trade | over 20% | |
@@ -114,7 +114,7 @@ server.mjs        static app + JSON API on one port
 src/              chains, KyberSwap routes, Checkpoint (gate.mjs), bytecode heuristics (health.mjs),
                   limits (policy.mjs), tickets (intents.mjs), journal, wallet sign-in (auth.mjs),
                   Hyperliquid reads, tool registry (tools.mjs), the Claude agent (agent.mjs), mock mode
-public/           the app (vanilla JS, no build step)
+public/           homepage (index.html) and the app at /app/ (vanilla JS, no build step)
 mcp/              MCP server over stdio; forwards to the REST API
 scripts/token.mjs create API tokens
 test/             end-to-end tests in mock mode

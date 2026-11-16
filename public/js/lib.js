@@ -1,4 +1,4 @@
-// Shared helpers: API calls, wallet (EIP-1193), rendering primitives.
+// Shared helpers: API calls, wallet (EIP-1193), formatting and Checkpoint rendering.
 
 export const state = { address: null, chain: localStorageGet("quill.chain") || "robinhood", chains: [], health: null };
 
@@ -20,15 +20,56 @@ export async function api(path, { method = "GET", body } = {}) {
 /** Escape text for innerHTML. Token names and symbols come from the internet: always escape them. */
 export const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 export const short = (a) => (a && /^0x[0-9a-fA-F]{20,}$/.test(a) ? `${a.slice(0, 6)}…${a.slice(-4)}` : a || "");
-export const usd = (n) => (n == null || !isFinite(n) ? "–" : n >= 1e9 ? `$${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(1)}K` : `$${Number(n).toFixed(2)}`);
-export const price = (n) => (n == null ? "–" : n >= 1000 ? n.toLocaleString("en-US", { maximumFractionDigits: 2 }) : n >= 1 ? n.toFixed(3) : n.toPrecision(4));
-export const signed = (n) => (n == null ? "–" : `<span class="${n >= 0 ? "up" : "down"}">${n > 0 ? "+" : ""}${n.toFixed(2)}%</span>`);
+
+/** Compact USD: $1.24M, $18.4K, $932.10 */
+export const usd = (n) => {
+  if (n == null || !isFinite(n)) return "–";
+  const a = Math.abs(n);
+  return a >= 1e9 ? `$${(n / 1e9).toFixed(2)}B` : a >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : a >= 1e3 ? `$${(n / 1e3).toFixed(1)}K` : `$${n.toFixed(2)}`;
+};
+
+/** Token price with subscript zeros for tiny values: $0.0₄308 */
+export function fmtPrice(n, { dollar = true } = {}) {
+  if (n == null || !isFinite(n)) return "–";
+  const d = dollar ? "$" : "";
+  if (n >= 1000) return d + n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  if (n >= 1) return d + n.toFixed(n >= 100 ? 2 : 3);
+  if (n >= 0.01) return d + n.toFixed(4);
+  if (n === 0) return d + "0";
+  const s = n.toFixed(20).slice(2);
+  const zeros = s.match(/^0*/)[0].length;
+  const sub = String(zeros).split("").map((c) => "₀₁₂₃₄₅₆₇₈₉"[c]).join("");
+  return `${d}0.0${sub}${s.slice(zeros, zeros + 4).replace(/0+$/, "")}`;
+}
+export const price = (n) => fmtPrice(n, { dollar: false });
+export const signed = (n, digits = 2) => (n == null || !isFinite(n) ? '<span class="faint">–</span>' : `<span class="${n >= 0 ? "up" : "down"}">${n > 0 ? "+" : ""}${n.toFixed(digits)}%</span>`);
+
+export function ago(iso) {
+  if (!iso) return "–";
+  const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
+  return s < 60 ? `${Math.floor(s)}s` : s < 3600 ? `${Math.floor(s / 60)}m` : s < 86400 ? `${Math.floor(s / 3600)}h` : `${Math.floor(s / 86400)}d`;
+}
+
+export function avatar(sym, img) {
+  const letters = esc(String(sym || "?").replace(/[^\p{L}\p{N}]/gu, "").slice(0, 2).toUpperCase() || "?");
+  return `<span class="avatar">${letters}${img && /^https:\/\//.test(img) ? `<img src="${esc(img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}</span>`;
+}
 
 let toastTimer;
 export function toast(msg, ms = 3500) {
   const el = document.getElementById("toast");
+  if (!el) return;
   el.textContent = msg; el.hidden = false;
   clearTimeout(toastTimer); toastTimer = setTimeout(() => (el.hidden = true), ms);
+}
+
+export function initTheme(btn) {
+  if (!btn) return;
+  btn.onclick = () => {
+    const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    document.documentElement.dataset.theme = next;
+    localStorageSet("quill.theme", next);
+  };
 }
 
 // ---------- wallet ----------
@@ -57,6 +98,10 @@ export async function ensureChain(chainId) {
   try {
     await eth().request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x" + chainId.toString(16) }] });
   } catch (e) {
+    if (chainId === 4663 && (e.code === 4902 || /unrecognized|not added/i.test(e.message || ""))) {
+      await eth().request({ method: "wallet_addEthereumChain", params: [{ chainId: "0x1237", chainName: "Robinhood Chain", nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }, rpcUrls: ["https://rpc.mainnet.chain.robinhood.com"], blockExplorerUrls: ["https://robinhoodchain.blockscout.com"] }] });
+      return;
+    }
     throw new Error(`Switch your wallet to chain ${chainId} and try again (${e.message || e})`);
   }
 }

@@ -39,29 +39,30 @@ export async function gateSwap({ chain, tokenIn, tokenOut, amount, sender, slipp
   const policy = await checkPolicy({ address: sender, chain: q.chain, tokens: [tIn.address, tOut.address], usd: quote.inUsd, slippagePct });
   const P = policy.policy;
 
-  // Price impact: compare the full-size rate with a small probe of the same pair.
-  try {
-    const probeIn = amountIn / 100n > 0n ? amountIn / 100n : amountIn;
-    const probe = await route({ chain: q.chain, tokenIn: tIn, tokenOut: tOut, amountIn: probeIn });
-    const rateFull = Number(quote.amountOut) / Number(amountIn), rateProbe = Number(probe.amountOut) / Number(probeIn);
-    const impact = Math.max(0, 1 - rateFull / rateProbe);
-    const max = P.maxPriceImpactPct / 100;
-    add("impact", "Price impact", impact > max ? "fail" : impact > max / 2 ? "warn" : "pass", `${pct(impact)} (limit ${P.maxPriceImpactPct}%)`);
-  } catch (e) { add("impact", "Price impact", "warn", `Could not measure: ${e.message}`); }
-
-  // Value in vs out in USD: fees, impact and anything else the route loses on the way.
-  if (quote.inUsd && quote.outUsd) {
-    const loss = Math.max(0, 1 - quote.outUsd / quote.inUsd);
-    add("value", "Value kept", loss > 0.1 ? "fail" : loss > 0.03 ? "warn" : "pass", `$${quote.inUsd.toFixed(2)} in → $${quote.outUsd.toFixed(2)} out (${pct(loss)} lost)`);
-  }
-
-  // Test sell: quote selling back exactly what you would receive. Exposes transfer taxes and one-way pools.
+  // Test sell: quote selling back exactly what you would receive. Exposes transfer taxes and one-way pools, and gives
+  // the real cost of the trade: a round trip pays fees and impact twice, so one way costs about half of it.
+  // (Tiny probe quotes and the aggregator's USD prices were both tried as the reference and both misled on live
+  // Robinhood Chain data: small sizes get better market-maker quotes, and USD prices for thin tokens are often stale.)
+  let rt = null;
   try {
     const back = await route({ chain: q.chain, tokenIn: tOut, tokenOut: tIn, amountIn: quote.amountOut });
-    const rt = Math.max(0, 1 - Number(back.amountOut) / Number(amountIn));
-    const max = P.maxRoundTripLossPct / 100;
-    add("test_sell", "Test sell (round trip)", rt > max ? "fail" : rt > 0.06 ? "warn" : "pass", `selling back returns ${formatUnits(back.amountOut, tIn.decimals)} ${tIn.symbol} (${pct(rt)} round-trip loss)`);
+    rt = Math.max(0, 1 - Number(back.amountOut) / Number(amountIn));
+    const maxRt = P.maxRoundTripLossPct / 100;
+    add("test_sell", "Test sell (round trip)", rt > maxRt ? "fail" : rt > 0.06 ? "warn" : "pass", `selling back returns ${formatUnits(back.amountOut, tIn.decimals)} ${tIn.symbol} (${pct(rt)} round-trip loss)`);
   } catch (e) { add("test_sell", "Test sell (round trip)", "fail", `No route to sell back: ${e.message}`); }
+
+  const max = P.maxPriceImpactPct / 100;
+  if (rt != null) {
+    const oneWay = rt / 2;
+    add("impact", "Price impact + fees", oneWay > max ? "fail" : oneWay > Math.min(0.03, max / 2) ? "warn" : "pass", `about ${pct(oneWay)} one way, from the test sell (limit ${P.maxPriceImpactPct}%)`);
+  }
+  // Against market USD prices: informational unless far off, since USD prices for thin tokens lag the pools.
+  if (quote.inUsd && quote.outUsd) {
+    const gap = 1 - quote.outUsd / quote.inUsd;
+    // A pool can sell you a token far above market and buy it back at the same wrong price; the round trip
+    // would look clean, so a very large gap blocks.
+    add("market", "Vs market price", gap > 0.4 ? "fail" : gap > 0.15 ? "warn" : "info", `$${quote.inUsd.toFixed(2)} in → $${quote.outUsd.toFixed(2)} out at reference USD prices (${gap >= 0 ? "" : "+"}${pct(Math.abs(gap))}${gap >= 0 ? " below" : " above"})`);
+  }
 
   // Contract heuristics on whichever side is not on the known list.
   for (const t of [tIn, tOut]) {

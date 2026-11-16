@@ -200,3 +200,31 @@ test("Robinhood Chain is the default: USDG and tokenized stocks resolve", async 
   const r = await call("/api/chat", { method: "POST", body: { message: "buy NVDA with 0.01 ETH" } });
   assert.equal(r.json.tickets[0].gate.swap.chain, "robinhood");
 });
+
+test("onchain live tools: pools, token, stocks, chain status, portfolio and chat commands", async () => {
+  const tr = await call("/api/tools/onchain_pools?kind=trending&limit=3");
+  assert.equal(tr.json.pools.length, 3);
+  assert.ok(tr.json.pools[0].token.symbol);
+  assert.equal((await call("/api/tools/onchain_pools?kind=bogus")).status, 400);
+  const tk = await call("/api/tools/onchain_token?address=0x020bfc650a365f8bb26819deaabf3e21291018b4");
+  assert.equal(tk.json.token.symbol, "CASHCAT");
+  assert.ok(tk.json.totals.volume24hUsd > 0);
+  const st = await call("/api/tools/stock_prices");
+  assert.equal(st.json.stocks.length, 63);
+  assert.equal((await call("/api/tools/chain_status")).json.chainId, 4663);
+  const pf = await call("/api/tools/get_portfolio?address=0x7e5f4552091a69125d5dfcb7b8c2659029395bdf");
+  assert.ok(pf.json.holdings.some((h) => h.symbol === "TSLA"));
+  const chat = await call("/api/chat", { method: "POST", body: { message: "what's trending?" } });
+  assert.match(chat.json.reply, /Trending on Robinhood Chain/);
+  const np = await call("/api/chat", { method: "POST", body: { message: "show new pairs" } });
+  assert.match(np.json.reply, /Newest pairs/);
+});
+
+test("homepage and app shell are served", async () => {
+  const home = await fetch(base + "/");
+  assert.match(await home.text(), /The trading desk/);
+  const redirect = await fetch(base + "/app", { redirect: "manual" });
+  assert.equal(redirect.status, 301);
+  const app = await fetch(base + "/app/");
+  assert.match(await app.text(), /Onchain live/);
+});

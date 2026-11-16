@@ -22,6 +22,22 @@ export async function rpc(chain, method, params = []) {
   return j.result;
 }
 
+/** rpcBatch(chain, [{ method, params }]) → results in order (null for a call that errored). Sent in chunks of 40. */
+export async function rpcBatch(chain, calls) {
+  const key = chainKey(chain);
+  if (MOCK) return calls.map((c) => { try { return mockRpc(key, c.method, c.params); } catch { return null; } });
+  const out = [];
+  for (let i = 0; i < calls.length; i += 40) {
+    const chunk = calls.slice(i, i + 40).map((c, j) => ({ jsonrpc: "2.0", id: j, method: c.method, params: c.params }));
+    const res = await fetch(CHAINS[key].rpc, { method: "POST", signal: AbortSignal.timeout(15000), headers: { "content-type": "application/json" }, body: JSON.stringify(chunk) });
+    if (!res.ok) throw new Error(`RPC ${CHAINS[key].name} returned ${res.status}`);
+    const arr = await res.json();
+    const byId = new Map((Array.isArray(arr) ? arr : []).map((r) => [r.id, r.error ? null : r.result]));
+    chunk.forEach((c) => out.push(byId.has(c.id) ? byId.get(c.id) : null));
+  }
+  return out;
+}
+
 const pad = (hex) => hex.replace(/^0x/, "").toLowerCase().padStart(64, "0");
 const SEL = { decimals: "0x313ce567", symbol: "0x95d89b41", allowance: "0xdd62ed3e", approve: "0x095ea7b3", balanceOf: "0x70a08231" };
 

@@ -29,6 +29,9 @@ const json = (v) => JSON.stringify(v, (_k, x) => (typeof x === "bigint" ? x.toSt
 // Idempotency for execute calls: same key → same response for 10 minutes.
 const idem = new Map();
 
+// Read tools whose answer does not depend on who asks, and how long (seconds) a shared cache may keep them.
+const PUBLIC_CACHE = { onchain_pools: 30, onchain_token: 30, stock_prices: 60, chain_status: 3, list_chains: 3600, analyze_ticker: 15, get_movers: 30, get_funding_extremes: 60, token_health: 300 };
+
 function send(res, status, body, headers = {}) {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...headers });
   res.end(json(body));
@@ -72,7 +75,13 @@ async function api(req, res, url) {
     const tool = TOOL_MAP[m[1]];
     if (!tool) return send(res, 404, { error: `Unknown tool ${m[1]}` });
     const args = coerceArgs(tool, req.method === "POST" ? await body(req) : q);
-    if (tool.tier === "read") return send(res, 200, await tool.run(args, { address: wallet, surface: "api" }));
+    if (tool.tier === "read") {
+      // Public market data is the same for everyone: let the CDN (Vercel edge, a proxy) and browsers cache it briefly so
+      // many visitors cost one upstream call. Anything that depends on the signed-in wallet stays no-store.
+      const ttl = PUBLIC_CACHE[tool.name];
+      const headers = ttl ? { "cache-control": `public, max-age=${Math.min(ttl, 10)}, s-maxage=${ttl}, stale-while-revalidate=${ttl * 4}` } : {};
+      return send(res, 200, await tool.run(args, { address: ttl ? null : wallet, surface: "api" }), headers);
+    }
     if (req.method !== "POST") return send(res, 405, { error: "Use POST for prepare and execute tools" });
     const tok = await findToken(req.headers["x-api-key"]);
     if (!tok) return send(res, 401, { error: "x-api-key required (create one with: npm run token)" });
@@ -124,6 +133,7 @@ async function api(req, res, url) {
 
 async function serveStatic(req, res, url) {
   let rel = decodeURIComponent(url.pathname);
+  if (rel === "/app") { res.writeHead(301, { location: "/app/" + url.search }); return res.end(); }
   if (rel.endsWith("/")) rel += "index.html";
   const file = path.normalize(path.join(PUBLIC, rel));
   if (!file.startsWith(PUBLIC)) { res.writeHead(403); return res.end(); }
