@@ -2,7 +2,7 @@
 // are under water, and ink that gathers at the nib and falls. Three.js, no textures, no models.
 import * as THREE from "/vendor/three.module.min.js";
 
-export function mountQuill(canvas, { reduced = false } = {}) {
+export function mountQuill(canvas, { reduced = false, manual = false } = {}) {
   let renderer;
   try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" }); }
   catch { return null; }
@@ -115,9 +115,14 @@ export function mountQuill(canvas, { reduced = false } = {}) {
 
   function loop() {
     raf = 0;
-    if (!visible) return;
+    if (!visible || manual) return;
+    draw(reduced ? 1.2 : (performance.now() - t0) / 1000);
+    if (!reduced) raf = requestAnimationFrame(loop);
+  }
+
+  // draw(time): one frame at a given time in seconds. Used by the loop, and directly when rendering video frames.
+  function draw(time) {
     resize();
-    const time = reduced ? 1.2 : (performance.now() - t0) / 1000;
     mx += (tx - mx) * 0.04; my += (ty - my) * 0.04;
     quill.rotation.y = Math.sin(time * 0.25) * 0.5 + mx * 0.35;
     quill.rotation.x = Math.sin(time * 0.18) * 0.12 + my * 0.15;
@@ -128,7 +133,7 @@ export function mountQuill(canvas, { reduced = false } = {}) {
     glow.getWorldPosition(world);
     for (let i = 0; i < DROPS; i++) {
       const d = dropState[i];
-      if (!reduced) d.y -= d.v * 0.016;
+      if (!reduced) d.y -= d.v * (manual ? 1 / 30 : 0.016);
       if (d.y < -0.62) { d.y = 0; d.v = 0.4 + Math.random() * 0.8; d.x = (Math.random() - 0.5) * 0.25; }
       dropPos[i * 3] = world.x + d.x * (1 - d.y);
       dropPos[i * 3 + 1] = world.y + d.y;
@@ -139,8 +144,7 @@ export function mountQuill(canvas, { reduced = false } = {}) {
     sig.material.opacity = Math.min(0.6, sig.material.opacity + 0.004);
 
     renderer.render(scene, camera);
-    if (!reduced) raf = requestAnimationFrame(loop);
   }
-  loop();
-  return { stop: () => cancelAnimationFrame(raf) };
+  if (manual) draw(0); else loop();
+  return { stop: () => cancelAnimationFrame(raf), draw };
 }
