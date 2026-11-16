@@ -1,8 +1,8 @@
-// Sign-in with a wallet signature (personal_sign of a one-time nonce message). The session is an HttpOnly cookie.
+// Sign-in with a Solana wallet: the wallet signs a one-time message (signMessage, ed25519). The session is an HttpOnly cookie.
 // Nonces and sessions are sealed tokens (see seal.mjs), so no server memory is needed between requests.
 // Without a session the API treats the visitor as anonymous: read tools work, tickets and limits do not.
-import { secp256k1 } from "@noble/curves/secp256k1.js";
-import { keccak_256 } from "@noble/hashes/sha3.js";
+import { ed25519 } from "@noble/curves/ed25519.js";
+import { decode58, isSolAddress } from "./sol/base58.mjs";
 import { randomBytes } from "node:crypto";
 import { seal, unseal } from "./seal.mjs";
 
@@ -12,31 +12,22 @@ const SECURE = process.env.COOKIE_SECURE === "1";
 const usedNonces = new Map(); // best-effort replay guard within one instance; the signature already binds the address
 
 export function loginMessage(address, nonce, host) {
-  return `${host || "Quill"} wants you to sign in with your wallet.\n\nAddress: ${address}\nNonce: ${nonce}\n\nSigning this proves you own the address. It costs nothing and cannot move funds.`;
+  return `${host || "Quill"} wants you to sign in with your Solana account:\n${address}\n\nSigning this proves you own the wallet. It costs nothing and cannot move funds.\n\nNonce: ${nonce}`;
 }
 
 /** newNonce(address, host) → { nonce (sealed), message } */
 export function newNonce(address, host) {
-  if (!/^0x[0-9a-fA-F]{40}$/.test(String(address || ""))) throw Object.assign(new Error("Invalid address"), { status: 400 });
+  if (!isSolAddress(address)) throw Object.assign(new Error("Invalid Solana address"), { status: 400 });
   const n = randomBytes(12).toString("hex");
   const message = loginMessage(address, n, host);
-  return { nonce: seal("nonce", { a: address.toLowerCase(), n, m: message }, NONCE_MS), message };
+  return { nonce: seal("nonce", { a: address, n, m: message }, NONCE_MS), message };
 }
 
-const hexToBytes = (h) => Uint8Array.from(Buffer.from(String(h).replace(/^0x/, ""), "hex"));
-const toAddress = (pubUncompressed) => "0x" + Buffer.from(keccak_256(pubUncompressed.slice(1))).toString("hex").slice(-40);
-
-/** recoverAddress(message, signature) for an EIP-191 personal_sign signature. */
-export function recoverAddress(message, signature) {
-  const msg = new TextEncoder().encode(message);
-  const prefix = new TextEncoder().encode(`\x19Ethereum Signed Message:\n${msg.length}`);
-  const hash = keccak_256(new Uint8Array([...prefix, ...msg]));
-  const sig = hexToBytes(signature);
-  if (sig.length !== 65) throw new Error("Signature must be 65 bytes");
-  let v = sig[64];
-  if (v >= 27) v -= 27;
-  const point = secp256k1.Signature.fromBytes(sig.slice(0, 64), "compact").addRecoveryBit(v).recoverPublicKey(hash);
-  return toAddress(point.toBytes(false));
+/** verifySignature(message, signature (base58 or base64), address) — ed25519 over the UTF-8 message bytes. */
+export function verifySignature(message, signature, address) {
+  const sig = /^[1-9A-HJ-NP-Za-km-z]+$/.test(signature) ? decode58(signature) : Uint8Array.from(Buffer.from(String(signature), "base64"));
+  if (sig.length !== 64) return false;
+  return ed25519.verify(sig, new TextEncoder().encode(message), decode58(address));
 }
 
 /** verifyLogin({ nonce, signature }) → { token, address } */
@@ -46,11 +37,11 @@ export function verifyLogin({ nonce, signature }) {
   const now = Date.now();
   for (const [k, exp] of usedNonces) if (exp < now) usedNonces.delete(k);
   if (usedNonces.has(n.n)) throw Object.assign(new Error("This sign-in was already used"), { status: 400 });
-  let addr;
-  try { addr = recoverAddress(n.m, signature); } catch { throw Object.assign(new Error("Invalid signature"), { status: 401 }); }
-  if (addr !== n.a) throw Object.assign(new Error("Signature does not match the address"), { status: 401 });
+  let ok = false;
+  try { ok = verifySignature(n.m, String(signature || ""), n.a); } catch {}
+  if (!ok) throw Object.assign(new Error("Signature does not match the wallet"), { status: 401 });
   usedNonces.set(n.n, n.exp);
-  return { token: seal("session", { a: addr }, SESSION_MS), address: addr };
+  return { token: seal("session", { a: n.a }, SESSION_MS), address: n.a };
 }
 
 export function sessionCookie(token, { secure = false } = {}) {

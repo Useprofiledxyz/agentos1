@@ -3,10 +3,10 @@
 // Both are single use (tracked per instance and in the data dir). Executing never trusts what was prepared: it re-quotes, re-runs the
 // Checkpoint and the policy, and builds calldata from that fresh route.
 import { randomBytes } from "node:crypto";
-import { build } from "./kyber.mjs";
-import { gateSwap, quoteSwap } from "./gate.mjs";
-import { allowance, encodeApprove } from "./rpc.mjs";
-import { CHAINS, chainKey, isNative } from "./chains.mjs";
+import { gateSwap, quoteSwap } from "./sol/gate.mjs";
+import { buildSwap } from "./sol/jup.mjs";
+import { decode58, isSolAddress } from "./sol/base58.mjs";
+import { EXPLORER } from "./sol/tokens.mjs";
 import { journal } from "./journal.mjs";
 import { recordUsage } from "./policy.mjs";
 import { seal, unseal } from "./seal.mjs";
@@ -19,8 +19,8 @@ const used = new Map(); // ref → expiry
 /** prepareSwap(params, { kind: "ticket" | "confirmation", owner }) → Checkpoint result plus id, or a refusal. */
 export async function prepareSwap(params, { kind = "ticket", owner = null } = {}) {
   const p = {
-    chain: chainKey(params.chain),
-    tokenIn: String(params.tokenIn || "ETH"),
+    chain: "solana",
+    tokenIn: String(params.tokenIn || "SOL"),
     tokenOut: String(params.tokenOut || ""),
     amount: String(params.amount ?? params.amountIn ?? ""),
     slippagePct: Number(params.slippagePct ?? 1),
@@ -75,7 +75,7 @@ async function take(id, { owner } = {}) {
  * (an approval if needed, then the swap). The wallet signs; the server never holds a key.
  */
 export async function buildTicket(id, sender) {
-  if (!/^0x[0-9a-fA-F]{40}$/.test(String(sender || ""))) throw Object.assign(new Error("Connect a wallet first"), { status: 400 });
+  if (!isSolAddress(sender)) throw Object.assign(new Error("Connect a wallet first"), { status: 400 });
   const x = await take(id, { owner: sender });
   const p = { ...x.params, sender };
   const gate = await gateSwap(p);
@@ -83,16 +83,25 @@ export async function buildTicket(id, sender) {
     await journal({ owner: sender, kind: "swap", stage: "build", outcome: "blocked", ref: x.ref, reason: "Checkpoint failed on re-check", params: p });
     return { ok: false, reason: "Checkpoint failed on the re-check, nothing was built", gate };
   }
-  const q = await quoteSwap(p);
-  const txs = [];
-  if (!isNative(q.tokenIn.address) && (await allowance(q.chain, q.tokenIn.address, sender, q.quote.router)) < q.amountIn) {
-    txs.push({ label: `Approve ${q.amount} ${q.tokenIn.symbol}`, to: q.tokenIn.address, data: encodeApprove(q.quote.router, q.amountIn), value: "0x0" });
+  // A fresh quote, then Jupiter builds the transaction for this wallet. Its minimum-out comes from your slippage.
+  let q = await quoteSwap(p);
+  let built;
+  try { built = await buildSwap({ quoteResponse: q.quote, user: sender }); }
+  catch (e) {
+    // Some venues (often RFQ / market-maker routes) cannot be built for every wallet: re-quote without them, once.
+    const venues = [...new Set((q.quote.routePlan || []).map((r) => r.swapInfo?.label).filter(Boolean))];
+    if (!venues.length) throw e;
+    q = await quoteSwap({ ...p, excludeDexes: venues });
+    built = await buildSwap({ quoteResponse: q.quote, user: sender });
   }
-  const swap = await build({ chain: q.chain, quote: q.quote, sender, slippageBps: p.slippagePct * 100 });
-  txs.push({ label: `Swap ${q.amount} ${q.tokenIn.symbol} → ${q.tokenOut.symbol}`, to: swap.to, data: swap.data, value: "0x" + swap.value.toString(16) });
-  await recordUsage(sender, q.quote.inUsd || 0);
+  if (!built?.swapTransaction) throw new Error("Jupiter did not return a transaction");
+  await recordUsage(sender, gate.swap?.inUsd || 0);
   await journal({ owner: sender, kind: "swap", stage: "build", outcome: "built", ref: x.ref, params: p, gateStatus: gate.status });
-  return { ok: true, ref: x.ref, chainId: CHAINS[q.chain].id, explorer: CHAINS[q.chain].explorer, minOutRaw: swap.minOut.toString(), txs, gate };
+  return {
+    ok: true, ref: x.ref, chain: "solana", explorer: EXPLORER, minOutRaw: q.quote.otherAmountThreshold || null,
+    txs: [{ label: `Swap ${q.amount} ${q.tokenIn.symbol} → ${q.tokenOut.symbol}`, tx: built.swapTransaction, lastValidBlockHeight: built.lastValidBlockHeight }],
+    gate,
+  };
 }
 
 /** executeIntent(id, { dryRun, owner }) — API/MCP path. Quill holds no keys, so live execution returns unsigned txs. */
@@ -105,7 +114,9 @@ export async function executeIntent(id, { dryRun = true, owner, sender } = {}) {
 }
 
 export async function markSent(id, { owner, hash }) {
-  if (!/^0x[0-9a-fA-F]{64}$/.test(String(hash || ""))) throw Object.assign(new Error("Invalid transaction hash"), { status: 400 });
+  let sigOk = false;
+  try { sigOk = decode58(String(hash || "")).length === 64; } catch {}
+  if (!sigOk) throw Object.assign(new Error("Invalid transaction signature"), { status: 400 });
   let x = null;
   try { x = open(id); } catch {}
   await journal({ owner, kind: "swap", stage: "sent", outcome: "sent", ref: x?.ref, hash, params: x?.params });

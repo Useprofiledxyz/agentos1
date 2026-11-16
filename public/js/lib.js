@@ -1,6 +1,6 @@
 // Shared helpers: API calls, wallet (EIP-1193), formatting and Checkpoint rendering.
 
-export const state = { address: null, chain: "robinhood", chains: [], health: null };
+export const state = { address: null, chain: "solana", tokens: null, health: null };
 
 export function localStorageGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
 export function localStorageSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
@@ -19,7 +19,8 @@ export async function api(path, { method = "GET", body } = {}) {
 
 /** Escape text for innerHTML. Token names and symbols come from the internet: always escape them. */
 export const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-export const short = (a) => (a && /^0x[0-9a-fA-F]{20,}$/.test(a) ? `${a.slice(0, 6)}…${a.slice(-4)}` : a || "");
+export const isMint = (a) => /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(String(a || ""));
+export const short = (a) => (a && (isMint(a) || /^[1-9A-HJ-NP-Za-km-z]{60,90}$/.test(a)) ? `${a.slice(0, 4)}…${a.slice(-4)}` : a || "");
 
 /** Compact USD: $1.24M, $18.4K, $932.10 */
 export const usd = (n) => {
@@ -50,15 +51,15 @@ export function ago(iso) {
   return s < 60 ? `${Math.floor(s)}s` : s < 3600 ? `${Math.floor(s / 60)}m` : s < 86400 ? `${Math.floor(s / 3600)}h` : `${Math.floor(s / 86400)}d`;
 }
 
-const ETH_LIKE = new Set(["0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "0x0bd7d308f8e1639fab988df18a8011f41eacad73"]);
+export const SOL_MINT = "So11111111111111111111111111111111111111112";
 
 /** Token or stock logo from /api/logo (cached by the CDN; a generated avatar when no logo exists). Letters show while it loads. */
 export function avatar(sym, address, image, opts = {}) {
   const letters = esc(String(sym || "?").replace(/[^\p{L}\p{N}]/gu, "").slice(0, 2).toUpperCase() || "?");
-  const ok = /^0x[0-9a-fA-F]{40}$/.test(String(address || ""));
-  const a = ok ? address.toLowerCase() : "";
-  // ETH and WETH ship with the site, so they never wait on a lookup
-  const src = ETH_LIKE.has(a) || (!ok && /^w?eth$/i.test(String(sym || ""))) ? "/img/eth.svg" : ok ? `/api/logo/${esc(a)}?s=${encodeURIComponent(String(sym || "").slice(0, 12))}${image && /^https:\/\//.test(image) ? `&u=${encodeURIComponent(image)}` : ""}` : "";
+  const ok = isMint(address);
+  const a = ok ? String(address) : "";
+  // SOL ships with the site, so it never waits on a lookup
+  const src = a === SOL_MINT || (!ok && /^w?sol$/i.test(String(sym || ""))) ? "/img/sol.svg" : ok ? `/api/logo/${esc(a)}?s=${encodeURIComponent(String(sym || "").slice(0, 12))}${image && /^https:\/\//.test(image) ? `&u=${encodeURIComponent(image)}` : ""}` : "";
   // Company logos are not round artwork: fit them whole on a matching backdrop instead of cropping them.
   const stock = opts.stock ?? stockSet().has(a);
   return `<span class="avatar${stock ? " is-stock" : ""}">${letters}${src ? `<img src="${src}" alt="" loading="lazy" decoding="async"${stock ? ' onload="qFitLogo(this)"' : ""} onerror="this.remove()">` : ""}</span>`;
@@ -66,7 +67,7 @@ export function avatar(sym, address, image, opts = {}) {
 
 let stocks;
 function stockSet() {
-  if (!stocks && state.chains.length) stocks = new Set(state.chains.flatMap((c) => (c.stocks || []).map((s) => s.address.toLowerCase())));
+  if (!stocks && state.tokens) stocks = new Set(state.tokens.stocks.map((s) => s.address));
   return stocks || new Set();
 }
 
@@ -107,52 +108,52 @@ export function initTheme(btn) {
   };
 }
 
-// ---------- wallet ----------
+// ---------- wallet (Phantom, Solflare, Backpack…) ----------
 
-const eth = () => window.ethereum;
+export function walletProvider() {
+  return window.phantom?.solana || window.solflare || window.backpack || window.solana || null;
+}
+const b64 = (bytes) => btoa(String.fromCharCode(...bytes));
+const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
 export async function connectWallet() {
-  if (!eth()) throw new Error("No browser wallet found. Install MetaMask, Rabby or Coinbase Wallet.");
-  const [addr] = await eth().request({ method: "eth_requestAccounts" });
+  const w = walletProvider();
+  if (!w) throw new Error("No Solana wallet found. Install Phantom, Solflare or Backpack.");
+  const r = await w.connect();
+  const addr = String(r?.publicKey || w.publicKey);
   const { message, nonce } = await api("/auth/nonce", { method: "POST", body: { address: addr } });
-  const hex = "0x" + Array.from(new TextEncoder().encode(message), (b) => b.toString(16).padStart(2, "0")).join("");
-  const signature = await eth().request({ method: "personal_sign", params: [hex, addr] });
-  const r = await api("/auth/verify", { method: "POST", body: { nonce, signature } });
-  state.address = r.address;
-  return r.address;
+  const signed = await w.signMessage(new TextEncoder().encode(message), "utf8");
+  const sig = signed?.signature || signed;
+  const r2 = await api("/auth/verify", { method: "POST", body: { nonce, signature: b64(new Uint8Array(sig)) } });
+  state.address = r2.address;
+  return r2.address;
 }
 
 export async function disconnectWallet() {
   await api("/auth/logout", { method: "POST", body: {} });
+  try { await walletProvider()?.disconnect?.(); } catch {}
   state.address = null;
 }
 
-export async function ensureChain(chainId) {
-  const cur = parseInt(await eth().request({ method: "eth_chainId" }), 16);
-  if (cur === chainId) return;
-  try {
-    await eth().request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x" + chainId.toString(16) }] });
-  } catch (e) {
-    if (chainId === 4663 && (e.code === 4902 || /unrecognized|not added/i.test(e.message || ""))) {
-      await eth().request({ method: "wallet_addEthereumChain", params: [{ chainId: "0x1237", chainName: "Robinhood Chain", nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }, rpcUrls: ["https://rpc.mainnet.chain.robinhood.com"], blockExplorerUrls: ["https://robinhoodchain.blockscout.com"] }] });
-      return;
-    }
-    throw new Error(`Switch your wallet to chain ${chainId} and try again (${e.message || e})`);
-  }
+/** sendTx({ tx: base64 VersionedTransaction }) → signature. The wallet signs and broadcasts. */
+export async function sendTx(t) {
+  const w = walletProvider();
+  if (!w) throw new Error("No Solana wallet found");
+  if (!window.solanaWeb3) throw new Error("Solana library not loaded");
+  const tx = window.solanaWeb3.VersionedTransaction.deserialize(unb64(t.tx));
+  const r = await w.signAndSendTransaction(tx);
+  return String(r?.signature || r);
 }
 
-export async function sendTx(tx) {
-  return eth().request({ method: "eth_sendTransaction", params: [{ from: state.address, to: tx.to, data: tx.data, value: tx.value }] });
-}
-
-export async function waitReceipt(hash, { timeoutMs = 180_000 } = {}) {
+export async function waitReceipt(signature, { timeoutMs = 90_000 } = {}) {
   const until = Date.now() + timeoutMs;
   while (Date.now() < until) {
-    const r = await eth().request({ method: "eth_getTransactionReceipt", params: [hash] }).catch(() => null);
-    if (r) { if (r.status === "0x1") return r; throw new Error("Transaction reverted on chain"); }
-    await new Promise((res) => setTimeout(res, 2000));
+    const s = await api(`/tools/tx_status?signature=${encodeURIComponent(signature)}`).catch(() => null);
+    if (s?.err) throw new Error("Transaction failed on chain");
+    if (s && (s.status === "confirmed" || s.status === "finalized")) return s;
+    await new Promise((res) => setTimeout(res, 1500));
   }
-  throw new Error("Timed out waiting for the transaction");
+  throw new Error("Timed out waiting for confirmation. Check the transaction on Solscan.");
 }
 
 // ---------- checkpoint rendering ----------

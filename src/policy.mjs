@@ -10,7 +10,7 @@ export const DEFAULT_POLICY = {
   maxPriceImpactPct: 8,
   maxRoundTripLossPct: 20,
   blockedTokens: [],
-  allowedChains: ["robinhood", "base", "arbitrum", "ethereum"],
+  allowedChains: ["solana"],
   freeMessagesPerDay: 30,
   note: "Operator policy. Edit this file to change limits; it is re-read on every action.",
 };
@@ -74,7 +74,6 @@ export async function checkPolicy({ address, chain, tokens = [], usd, slippagePc
   const row = (id, label, status, detail) => rows.push({ id, label, status, detail });
   if (p.killSwitch) row("kill", "Operator kill switch", "fail", "All execution is stopped by the operator.");
   if (p.paused) row("pause", "Paused", "fail", "You paused all actions. Unpause in Limits.");
-  if (!p.allowedChains.includes(chain)) row("chain", "Chain allowed", "fail", `${chain} is not allowed by policy.`);
   const blocked = tokens.filter((t) => p.blockedTokens.map(lc).includes(lc(t)));
   if (blocked.length) row("blocked", "Token allowed", "fail", `Blocked by policy: ${blocked.join(", ")}`);
   if (usd != null) {

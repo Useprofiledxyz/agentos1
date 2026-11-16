@@ -1,4 +1,4 @@
-// Homepage: the 3D quill, menu, scroll chapters and live Robinhood Chain data in the chapter panes.
+// Homepage: the 3D quill, menu, scroll chapters and live Solana data in the chapter panes.
 import { api, avatar, checkpointHtml, esc, fmtPrice, signed, usd } from "./lib.js";
 
 const $ = (s) => document.querySelector(s);
@@ -23,7 +23,7 @@ menu.addEventListener("click", (e) => { if (e.target.closest("a")) setMenu(false
 addEventListener("keydown", (e) => { if (e.key === "Escape") setMenu(false); });
 
 // works-with marquee (names only)
-const works = ["Robinhood Chain", "Uniswap", "Pons", "KyberSwap", "Long", "Bankr", "Virtuals", "GeckoTerminal", "DexScreener", "MetaMask", "Rabby", "Coinbase Wallet", "Claude", "Claude Code", "Cursor", "Blockscout"];
+const works = ["Solana", "Jupiter", "Raydium", "LaunchLab", "pump.fun", "Meteora", "Orca", "xStocks", "GeckoTerminal", "DexScreener", "Phantom", "Solflare", "Backpack", "Claude", "Claude Code", "Cursor", "Blockscout"];
 $("#worksTrack").innerHTML = [...works, ...works].map((w) => `<span>${esc(w)}</span>`).join("");
 
 // reveal
@@ -53,10 +53,10 @@ async function block() {
   const el = $("#navLive");
   try {
     const s = await api("/tools/chain_status");
-    el.title = `Live on Robinhood Chain. Latest block #${s.block.toLocaleString("en-US")}, ${s.ageSec}s ago. Click to open it in the explorer.`;
-    el.href = `https://robinhoodchain.blockscout.com/block/${s.block}`;
+    el.title = `Live on Solana. Slot ${s.slot.toLocaleString("en-US")}${s.tps ? `, ~${s.tps.toLocaleString("en-US")} TPS` : ""}. Click to open it in the explorer.`;
+    el.href = `https://solscan.io/block/${s.slot}`;
     el.classList.remove("offline");
-  } catch { el.title = "Robinhood Chain is not answering right now"; el.classList.add("offline"); }
+  } catch { el.title = "Solana RPC is not answering right now"; el.classList.add("offline"); }
 }
 
 let trending = [];
@@ -73,11 +73,11 @@ async function live() {
 }
 
 async function liveCheck() {
-  const pick = trending.find((p) => p.token.address && !p.token.stock && !["USDG", "WETH"].includes(p.token.symbol));
+  const pick = trending.find((p) => p.token.address && !p.token.stock && !["USDC", "USDT", "SOL"].includes(p.token.symbol));
   if (!pick) return;
   $("#paneCheckSym").textContent = pick.token.symbol;
   try {
-    const r = await api(`/tools/check_token?${new URLSearchParams({ chain: "robinhood", address: pick.token.address })}`);
+    const r = await api(`/tools/check_token?${new URLSearchParams({ address: pick.token.address })}`);
     r.checks = r.checks.filter((c) => !["per_trade", "daily", "slippage"].includes(c.id));
     $("#paneCheckBody").innerHTML = checkpointHtml(r);
   } catch { $("#paneCheckBody").innerHTML = `<div class="empty">The Checkpoint is busy. Open the app to run it.</div>`; }
@@ -89,7 +89,7 @@ async function stocks() {
     $("#nStocks").textContent = r.stocks.length;
     const pick = r.stocks.filter((s) => s.priceUsd != null).sort((a, b) => (b.volume24hUsd || 0) - (a.volume24hUsd || 0)).slice(0, 12);
     if (!pick.length) throw new Error();
-    $("#paneStocks").innerHTML = pick.map((s) => `<a href="/app/#/swap?in=ETH&out=${esc(s.symbol)}">${avatar(s.symbol, s.address, null, { stock: true })}<b>${esc(s.symbol)}</b><span class="p">${fmtPrice(s.priceUsd)}</span> ${signed(s.change24hPct)}</a>`).join("");
+    $("#paneStocks").innerHTML = pick.map((s) => `<a href="/app/#/swap?in=SOL&out=${esc(s.symbol)}">${avatar(s.symbol, s.address, null, { stock: true })}<b>${esc(s.symbol)}</b><span class="p">${fmtPrice(s.priceUsd)}</span> ${signed(s.change24hPct)}</a>`).join("");
   } catch { setTimeout(stocks, 15000); }
 }
 
