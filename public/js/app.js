@@ -276,11 +276,11 @@ function swap(q) {
   view.innerHTML = head(`Swap`, `On ${esc(chainName())}. Routes from KyberSwap; the ticket is re-checked on the live pool right before you sign.`)
     + `<div class="grid">
       <form class="card span-5 swap-card" id="swapForm" autocomplete="off">
-        <div class="leg"><label for="sAmt">You pay</label><div class="leg-row"><input class="amt" id="sAmt" inputmode="decimal" value="${esc(q.get("amount") || "0.01")}" pattern="[0-9]*[.]?[0-9]+" required aria-label="Amount"><input class="tok" id="sIn" list="known" value="${esc(q.get("in") || "ETH")}" required aria-label="Token you pay"></div></div>
+        <div class="leg"><label for="sAmt">You pay</label><div class="leg-row"><input class="amt" id="sAmt" inputmode="decimal" value="${esc(q.get("amount") || "0.01")}" pattern="[0-9]*[.]?[0-9]+" required aria-label="Amount"><span class="tok-logo" id="sInLogo"></span><input class="tok" id="sIn" list="known" value="${esc(q.get("in") || "ETH")}" required aria-label="Token you pay"></div></div>
         <button type="button" class="flip" id="flip" aria-label="Flip tokens">⇅</button>
-        <div class="leg"><label for="sOut">You receive</label><div class="leg-row"><span class="out-amt" id="outAmt">—</span><input class="tok" id="sOut" list="known" value="${esc(q.get("out") || defOut)}" placeholder="symbol or 0x…" required aria-label="Token you receive"></div></div>
+        <div class="leg"><label for="sOut">You receive</label><div class="leg-row"><span class="out-amt" id="outAmt">—</span><span class="tok-logo" id="sOutLogo"></span><input class="tok" id="sOut" list="known" value="${esc(q.get("out") || defOut)}" placeholder="symbol or 0x…" required aria-label="Token you receive"></div></div>
         <datalist id="known">${known.map((t) => `<option value="${esc(t)}">`).join("")}</datalist>
-        ${chain?.stocks?.length ? `<div class="field" style="margin-top:14px"><label>Stocks</label><div class="chips">${chain.stocks.slice(0, 10).map((s) => `<button type="button" class="chip" data-stock="${esc(s.symbol)}" title="${esc(s.name)}">${esc(s.symbol)}</button>`).join("")}</div></div>` : ""}
+        ${chain?.stocks?.length ? `<div class="field" style="margin-top:14px"><label>Stocks</label><div class="chips">${chain.stocks.slice(0, 10).map((s) => `<button type="button" class="chip chip-logo" data-stock="${esc(s.symbol)}" title="${esc(s.name)}">${avatar(s.symbol, s.address)}${esc(s.symbol)}</button>`).join("")}</div></div>` : ""}
         <div class="row between" style="margin:14px 0 6px"><span class="field"><label>Slippage</label></span><div class="seg" id="slip">${[0.5, 1, 3, 5].map((s) => `<button type="button" data-s="${s}" class="${s === 1 ? "on" : ""}">${s}%</button>`).join("")}</div></div>
         <button class="btn primary block" type="submit" style="padding:14px">${state.address ? "Run Checkpoint & make ticket" : "Run Checkpoint"}</button>
       </form>
@@ -288,8 +288,23 @@ function swap(q) {
     </div>`;
   let slip = 1;
   $("#slip").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; slip = Number(b.dataset.s); $("#slip").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); };
-  $("#flip").onclick = () => { const a = $("#sIn").value; $("#sIn").value = $("#sOut").value; $("#sOut").value = a; $("#outAmt").textContent = "—"; };
-  view.querySelectorAll("[data-stock]").forEach((b) => (b.onclick = () => { $("#sIn").value = "ETH"; $("#sOut").value = b.dataset.stock; $("#outAmt").textContent = "—"; }));
+  // token logos next to the inputs, following whatever is typed (symbol or 0x address)
+  const addrOf = (v) => {
+    v = String(v || "").trim();
+    if (/^0x[0-9a-fA-F]{40}$/.test(v)) return v;
+    const u = v.toUpperCase();
+    return chain?.tokenAddresses?.[u] || chain?.stocks?.find((s) => s.symbol === u)?.address || null;
+  };
+  const paintLogos = () => {
+    for (const [inp, slot] of [["#sIn", "#sInLogo"], ["#sOut", "#sOutLogo"]]) {
+      const v = $(inp).value.trim(), a = addrOf(v);
+      $(slot).innerHTML = v ? avatar(v.startsWith("0x") ? "?" : v, a) : "";
+    }
+  };
+  ["#sIn", "#sOut"].forEach((id) => $(id).addEventListener("input", paintLogos));
+  paintLogos();
+  $("#flip").onclick = () => { const a = $("#sIn").value; $("#sIn").value = $("#sOut").value; $("#sOut").value = a; $("#outAmt").textContent = "—"; paintLogos(); };
+  view.querySelectorAll("[data-stock]").forEach((b) => (b.onclick = () => { $("#sIn").value = "ETH"; $("#sOut").value = b.dataset.stock; $("#outAmt").textContent = "—"; paintLogos(); }));
   $("#swapForm").onsubmit = async (e) => {
     e.preventDefault();
     const out = $("#swapOut");
@@ -313,8 +328,8 @@ function swap(q) {
 function quoteHead(s) {
   if (!s) return "";
   return `<div class="ticket-legs" style="margin-bottom:14px">
-    <div class="tl"><b>${esc(s.amountIn)}</b><span>${esc(s.tokenIn.symbol)} · ${usd(s.inUsd)}</span></div><div class="arrow">→</div>
-    <div class="tl"><b>${esc(s.amountOut)}</b><span>${esc(s.tokenOut.symbol)} · ${usd(s.outUsd)}</span></div></div>`;
+    <div class="tl"><b>${esc(s.amountIn)}</b><span class="tl-tok">${avatar(s.tokenIn.symbol, s.tokenIn.address)}${esc(s.tokenIn.symbol)} · ${usd(s.inUsd)}</span></div><div class="arrow">→</div>
+    <div class="tl"><b>${esc(s.amountOut)}</b><span class="tl-tok">${avatar(s.tokenOut.symbol, s.tokenOut.address)}${esc(s.tokenOut.symbol)} · ${usd(s.outUsd)}</span></div></div>`;
 }
 
 function check(q) {

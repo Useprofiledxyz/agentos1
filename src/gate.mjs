@@ -89,7 +89,7 @@ export async function gateSwap({ chain, tokenIn, tokenOut, amount, sender, slipp
         const tx = await build({ chain: q.chain, quote, sender, slippageBps: slippagePct * 100 });
         const sim = await simulate(q.chain, { from: sender, ...tx });
         const insufficient = !sim.ok && /insufficient|exceeds balance|funds/i.test(sim.error || "");
-        add("simulation", "Simulation", sim.ok ? "pass" : insufficient ? "warn" : "fail", sim.ok ? "The exact swap succeeds against the current state." : insufficient ? `Balance too low to simulate: ${sim.error}` : `Reverts: ${sim.error}`);
+        add("simulation", "Simulation", sim.ok ? "pass" : insufficient ? "warn" : "fail", sim.ok ? "The exact swap succeeds against the current state." : insufficient ? `Your wallet does not hold enough ${tIn.symbol} for this amount plus gas, so the exact transaction could not be simulated. Top up or lower the amount.` : `Reverts: ${sim.error}`);
       }
     } catch (e) { add("simulation", "Simulation", "warn", `Could not simulate: ${e.message}`); }
   } else add("simulation", "Simulation", "info", "Connect a wallet to simulate the exact transaction from your address.");

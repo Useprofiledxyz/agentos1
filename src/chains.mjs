@@ -102,6 +102,7 @@ export function publicChains() {
   return Object.entries(CHAINS).map(([key, c]) => ({
     key, id: c.id, name: c.name, explorer: c.explorer,
     tokens: Object.keys(c.tokens).filter((s) => !c.tokens[s].stock),
+    tokenAddresses: Object.fromEntries(Object.entries(c.tokens).filter(([, t]) => !t.stock).map(([s, t]) => [s, t.address])),
     stocks: Object.entries(c.tokens).filter(([, t]) => t.stock).map(([s, t]) => ({ symbol: s, name: t.name, address: t.address })),
   }));
 }
