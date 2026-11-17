@@ -2,4 +2,4 @@
 <rect x="56" y="56" width="400" height="400" rx="120" fill="#0b0f17"/>
 <path d="M150 300 C150 200 220 150 300 160 L380 140 L340 200 C360 260 320 340 240 350 L160 380 L190 320 C166 320 150 312 150 300Z" fill="url(#g)"/>
 <circle cx="292" cy="206" r="14" fill="url(#e)"/>
-<path d="M200 300 C230 286 260 286 290 300" fill="none" stroke="url(#e)" stroke-width="12" stroke-linecap="round"/></svg>
+<path d="M196 290 C226 306 262 306 292 288" fill="none" stroke="url(#e)" stroke-width="12" stroke-linecap="round"/></svg>
