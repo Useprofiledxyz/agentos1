@@ -6,12 +6,12 @@ import { fileURLToPath } from "node:url";
 import { chat, llmOn } from "./src/agent.mjs";
 import { findToken } from "./src/apitokens.mjs";
 import { clearCookie, logout, newNonce, sessionAddress, sessionCookie, verifyLogin } from "./src/auth.mjs";
-import { publicTokens } from "./src/sol/tokens.mjs";
+import { publicChains } from "./src/chains.mjs";
 import { secretSource } from "./src/seal.mjs";
 import { logoResponse } from "./src/logos.mjs";
 import { buildTicket, getIntent, markSent, prepareSwap } from "./src/intents.mjs";
 import { readJournal } from "./src/journal.mjs";
-import { MOCK } from "./src/sol/mock.mjs";
+import { MOCK } from "./src/mock.mjs";
 import { getPolicy, setUserLimits } from "./src/policy.mjs";
 import { TOOL_MAP, coerceArgs, publicToolList } from "./src/tools.mjs";
 
@@ -66,11 +66,11 @@ async function api(req, res, url) {
   if (p === "/auth/me") return send(res, 200, { address: wallet });
   if (p === "/auth/logout" && req.method === "POST") { logout(); return send(res, 200, { ok: true }, { "set-cookie": clearCookie() }); }
 
-  if (p === "/health") return send(res, 200, { ok: true, llm: llmOn(), mock: MOCK, secret: secretSource, chain: "solana" });
-  if (p === "/chains" || p === "/tokens") return send(res, 200, publicTokens());
+  if (p === "/health") return send(res, 200, { ok: true, llm: llmOn(), mock: MOCK, secret: secretSource, chains: publicChains().map((c) => c.key) });
+  if (p === "/chains") return send(res, 200, publicChains());
 
   // GET /api/logo/:address?s=SYMBOL — token or stock logo (proxied image, or a generated avatar).
-  const lg = p.match(/^\/logo\/([1-9A-HJ-NP-Za-km-z]{32,44})(?:\.png)?$/);
+  const lg = p.match(/^\/logo\/(0x[0-9a-fA-F]{40})(?:\.png)?$/);
   if (lg && (req.method === "GET" || req.method === "HEAD")) {
     const r = await logoResponse(lg[1], String(q.s || "").slice(0, 12), q.u ? String(q.u).slice(0, 400) : null);
     res.writeHead(r.status, r.headers);
