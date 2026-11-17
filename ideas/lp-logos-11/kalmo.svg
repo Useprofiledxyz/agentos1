@@ -2,4 +2,4 @@
 <rect x="56" y="56" width="400" height="400" rx="200" fill="#0a0c1c"/>
 <path d="M136 220 C180 196 216 196 256 220 S332 244 376 220" fill="none" stroke="url(#g)" stroke-width="26" stroke-linecap="round"/>
 <path d="M136 280 C180 268 216 268 256 280 S332 292 376 280" fill="none" stroke="url(#g)" stroke-width="26" stroke-linecap="round" opacity=".65"/>
-<path d="M136 340 H376" stroke="url(#g)" stroke-width="26" stroke-linecap="round" opacity=".35"/></svg>
+<path d="M136 340 H376" stroke="#818cf8" stroke-width="26" stroke-linecap="round" opacity=".35"/></svg>
