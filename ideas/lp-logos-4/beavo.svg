@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d6a46c"/><stop offset="1" stop-color="#8b5a2b"/></linearGradient><linearGradient id="w" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+<rect x="56" y="56" width="400" height="400" rx="120" fill="#0f0b07"/>
+<circle cx="196" cy="168" r="26" fill="url(#g)"/><circle cx="316" cy="168" r="26" fill="url(#g)"/>
+<ellipse cx="256" cy="246" rx="112" ry="104" fill="url(#g)"/>
+<circle cx="218" cy="226" r="14" fill="#0f0b07"/><circle cx="294" cy="226" r="14" fill="#0f0b07"/>
+<ellipse cx="256" cy="262" rx="26" ry="18" fill="#3b2412"/>
+<rect x="236" y="282" width="18" height="30" rx="4" fill="#fff7ed"/><rect x="258" y="282" width="18" height="30" rx="4" fill="#fff7ed"/>
+<path d="M110 376 C150 352 190 352 230 376 S310 400 350 376 S392 360 404 366" fill="none" stroke="url(#w)" stroke-width="22" stroke-linecap="round"/></svg>
