@@ -12,6 +12,7 @@ export const BASE = {
   SOL: { mint: SOL_MINT, decimals: 9, name: "Solana", icon: "/img/sol.svg" },
   USDC: { mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", decimals: 6, name: "USD Coin", icon: "https://static.datapi.jup.ag/token-icons/6c4e5669d2a438653105399865445682e4a6cb51e19e1e61dc97578cd27bb9b2.webp" },
   USDT: { mint: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", decimals: 6, name: "Tether USD", icon: "https://static.datapi.jup.ag/token-icons/36574a5ee2cd469e059d070180985e59fbd57c82a54ea95763fab39973174100.webp" },
+  QUILL: { mint: "DujzX238tv1yhe1PNBAfHbXofdjFUwoitYKwzxriBAGS", decimals: 9, name: "Quill HQ", icon: "/img/quill.svg" },
   JUP: { mint: "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN", decimals: 6, name: "Jupiter", icon: "https://static.datapi.jup.ag/token-icons/12254fdd34fa9a0ad62075bd3872df61e28584f9519fe00c744b71b514d4c3d7.webp" },
 };
 export const STOCKS = xs.stocks; // [{ symbol: "TSLAx", ticker: "TSLA", name, mint, decimals, icon }]

@@ -51,6 +51,7 @@ export function ago(iso) {
   return s < 60 ? `${Math.floor(s)}s` : s < 3600 ? `${Math.floor(s / 60)}m` : s < 86400 ? `${Math.floor(s / 3600)}h` : `${Math.floor(s / 86400)}d`;
 }
 
+export const QUILL_CA = "DujzX238tv1yhe1PNBAfHbXofdjFUwoitYKwzxriBAGS";
 export const SOL_MINT = "So11111111111111111111111111111111111111112";
 
 /** Token or stock logo from /api/logo (cached by the CDN; a generated avatar when no logo exists). Letters show while it loads. */
@@ -59,7 +60,7 @@ export function avatar(sym, address, image, opts = {}) {
   const ok = isMint(address);
   const a = ok ? String(address) : "";
   // SOL ships with the site, so it never waits on a lookup
-  const src = a === SOL_MINT || (!ok && /^w?sol$/i.test(String(sym || ""))) ? "/img/sol.svg" : ok ? `/api/logo/${esc(a)}?s=${encodeURIComponent(String(sym || "").slice(0, 12))}${image && /^https:\/\//.test(image) ? `&u=${encodeURIComponent(image)}` : ""}` : "";
+  const src = a === QUILL_CA ? "/img/quill.svg" : a === SOL_MINT || (!ok && /^w?sol$/i.test(String(sym || ""))) ? "/img/sol.svg" : ok ? `/api/logo/${esc(a)}?s=${encodeURIComponent(String(sym || "").slice(0, 12))}${image && /^https:\/\//.test(image) ? `&u=${encodeURIComponent(image)}` : ""}` : "";
   // Company logos are not round artwork: fit them whole on a matching backdrop instead of cropping them.
   const stock = opts.stock ?? stockSet().has(a);
   return `<span class="avatar${stock ? " is-stock" : ""}">${letters}${src ? `<img src="${src}" alt="" loading="lazy" decoding="async"${stock ? ' onload="qFitLogo(this)"' : ""} onerror="this.remove()">` : ""}</span>`;
