@@ -2,16 +2,16 @@
 
 # Quill
 
-An AI trading desk for **Robinhood Chain** (chain 4663) with a checkpoint, plus Base, Arbitrum and Ethereum. Ask in plain words; Quill reads live data, runs the **Checkpoint** on the trade, and writes you a ticket. Nothing moves until you sign it in your own wallet. The agent never holds a key.
+An AI trading desk for **Solana** (chain 4663) with a checkpoint, plus Base, Arbitrum and Ethereum. Ask in plain words; Quill reads live data, runs the **Checkpoint** on the trade, and writes you a ticket. Nothing moves until you sign it in your own wallet. The agent never holds a key.
 
 | Area | What runs |
 |---|---|
 | Agent chat | Claude with read tools and `prepare_swap`. Plain-language requests become tickets you review and sign. Without an API key, a command parser handles the common requests. |
-| Swap | Any pair on **Robinhood Chain** (ETH, WETH, USDG, 63 tokenized stocks and ETFs such as NVDA, TSLA, SPY, and any coin by address), through KyberSwap routes. The website is Robinhood Chain only; the API also accepts `chain=base`, `arbitrum` or `ethereum` for developers. Calldata is built on the server from a fresh route, for the known router only. |
+| Swap | Any pair on **Solana** (ETH, WETH, USDG, 63 tokenized stocks and ETFs such as NVDA, TSLA, SPY, and any coin by address), through Jupiter routes. The website is Solana only; the API also accepts `chain=base`, `arbitrum` or `ethereum` for developers. Calldata is built on the server from a fresh route, for the known router only. |
 | Checkpoint | Pre-trade checks on every quote and again right before signing (see below). |
 | Check a token | Paste a contract: bytecode heuristics plus a small test buy and test sell. |
 | Logos | `/api/logo/:address`: coin logos from GeckoTerminal and DexScreener, company logos for tokenized stocks, a generated avatar when none exists. Batched lookups, CDN-cached for a week. |
-| Onchain live | Robinhood Chain pools from GeckoTerminal (trending, top volume, new pairs), token pages, tokenized stock prices, the latest block and wallet portfolios, refreshed live. Public market responses are CDN-cached. |
+| Onchain live | Solana pools from GeckoTerminal (trending, top volume, new pairs), token pages, tokenized stock prices, the latest block and wallet portfolios, refreshed live. Public market responses are CDN-cached. |
 | Limits | Operator ceiling in `data/policy.json`; each wallet can only tighten its own caps or pause. |
 | Journal | Every prepare, block, build and sent transaction, with its reason. |
 | API and MCP | The same tools over REST and an MCP server (`mcp/`) for Claude Code, Claude Desktop or Cursor. Execution is dry-run by default. |
@@ -26,7 +26,7 @@ An AI trading desk for **Robinhood Chain** (chain 4663) with a checkpoint, plus 
 
 | Check | Pass | Warn | Fail |
 |---|---|---|---|
-| Route | a KyberSwap route via the known router | | no route |
+| Route | a Jupiter route via the known router | | no route |
 | Price impact + fees | one-way cost (half the test-sell round trip) up to 3% | up to the limit (default 8%) | over the limit |
 | Vs market price | shown for reference | over 15% below reference USD prices | |
 | Test sell | round trip loses up to 6% | over 6% | over 20%, or no route back |
@@ -112,7 +112,7 @@ claude mcp add quill --env QUILL_URL=http://127.0.0.1:9330 --env QUILL_API_KEY=q
 
 ```
 server.mjs        static app + JSON API on one port
-src/              chains, KyberSwap routes, Checkpoint (gate.mjs), bytecode heuristics (health.mjs),
+src/              chains, Jupiter routes, Checkpoint (gate.mjs), bytecode heuristics (health.mjs),
                   limits (policy.mjs), tickets (intents.mjs), journal, wallet sign-in (auth.mjs),
                   Hyperliquid reads, tool registry (tools.mjs), the Claude agent (agent.mjs), mock mode
 public/           homepage (index.html) and the app at /app/ (vanilla JS, no build step)
@@ -133,12 +133,12 @@ Covers the Checkpoint on clean and risky tokens, the per-trade cap, wallet sign-
 
 - Sign-in is a wallet signature over a one-time nonce; the session is an HttpOnly cookie. Browser POSTs must be JSON (CSRF guard).
 - Wallet signing happens in your own wallet. The server builds transactions; it never signs.
-- Calldata is only built from a server-side route, and only for the configured KyberSwap router.
+- Calldata is only built from a server-side route, and only for the configured Jupiter router.
 - No keys, tokens or user data live in this repository. Secrets come from the environment.
 
 ## Not included
 
-Direct Pons bonding-curve routes (coins still on a Pons curve are only tradable here if KyberSwap routes them), perp order placement, a custodial agent wallet, a Telegram bot and launch monitoring are not part of this version.
+Direct Pons bonding-curve routes (coins still on a Pons curve are only tradable here if Jupiter routes them), perp order placement, a custodial agent wallet, a Telegram bot and launch monitoring are not part of this version.
 
 ## License
 
